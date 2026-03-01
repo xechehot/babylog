@@ -148,7 +148,7 @@ function LogPage() {
                 isToday={isToday}
               />
               <div className="px-4 pb-2 space-y-1.5">
-                {dayEntries.map((entry) =>
+                {[...dayEntries].reverse().map((entry) =>
                   editingId === entry.id ? (
                     <InlineEditForm
                       key={entry.id}
