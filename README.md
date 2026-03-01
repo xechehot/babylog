@@ -28,4 +28,43 @@ Parents track feedings, diaper changes, and weight on paper. This app turns thos
 
 ## Getting started
 
-TBD
+### Prerequisites
+
+- Python 3.12+, [uv](https://docs.astral.sh/uv/)
+- Node.js 20+
+- Anthropic API key
+
+### Backend
+
+```bash
+cd backend
+cp .env.example .env
+# Edit .env and set ANTHROPIC_API_KEY
+uv run fastapi dev app/main.py --host 0.0.0.0 --port 3849
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5174/babylog/
+
+### Tailscale Serve
+
+To access from any device on your tailnet:
+
+```bash
+/Applications/Tailscale.app/Contents/MacOS/Tailscale serve --set-path /babylog -bg localhost:5174
+```
+
+Add the Tailscale hostname to `FRONTEND_URL` in `backend/.env` for CORS:
+
+```
+FRONTEND_URL=http://localhost:5174/babylog,https://<your-machine>.tailb94fe6.ts.net/babylog
+```
+
+Then open `https://<your-machine>.tailb94fe6.ts.net/babylog/`
