@@ -42,15 +42,6 @@ function getEntryIcon(entryType: string, subtype: string | null): string {
   return ''
 }
 
-const SUBTYPE_LABELS: Record<string, string> = {
-  breast: 'breast',
-  formula: 'formula',
-  pee: 'pee',
-  poo: 'poo',
-  dry: 'dry',
-  'pee+poo': 'pee+poo',
-}
-
 const FEEDING_SUBTYPES = ['breast', 'formula'] as const
 const DIAPER_SUBTYPES = ['pee', 'poo', 'dry', 'pee+poo'] as const
 
@@ -602,10 +593,10 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
     [],
   )
 
-  const getDistance = (t1: Touch, t2: Touch) =>
+  const getDistance = (t1: React.Touch, t2: React.Touch) =>
     Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
 
-  const getMid = (t1: Touch, t2: Touch) => ({
+  const getMid = (t1: React.Touch, t2: React.Touch) => ({
     x: (t1.clientX + t2.clientX) / 2,
     y: (t1.clientY + t2.clientY) / 2,
   })
