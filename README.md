@@ -55,11 +55,13 @@ Open http://localhost:5174/babylog/
 
 ### Tailscale Serve
 
-To access from any device on your tailnet:
+To access from any device on your tailnet, start both services then run:
 
 ```bash
-/Applications/Tailscale.app/Contents/MacOS/Tailscale serve --set-path /babylog -bg localhost:5174
+bash tail_serve.sh
 ```
+
+This sets up two paths — `/babylog/api` routes to the backend, `/babylog` routes to the frontend.
 
 Add the Tailscale hostname to `FRONTEND_URL` in `backend/.env` for CORS:
 
