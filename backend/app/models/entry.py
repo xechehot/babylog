@@ -9,6 +9,7 @@ class EntryCreate(BaseModel):
     notes: str | None = None
     confidence: str | None = None
     raw_text: str | None = None
+    upload_id: int | None = None
 
 
 class EntryUpdate(BaseModel):

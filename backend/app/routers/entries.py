@@ -60,8 +60,9 @@ async def create_entry(entry: EntryCreate) -> EntryResponse:
 
     async with get_db() as db:
         cursor = await db.execute(
-            """INSERT INTO entries (entry_type, subtype, occurred_at, date, value, notes, confidence, raw_text)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO entries (entry_type, subtype, occurred_at, date,
+               value, notes, confidence, raw_text, upload_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 entry.entry_type,
                 entry.subtype,
@@ -71,6 +72,7 @@ async def create_entry(entry: EntryCreate) -> EntryResponse:
                 entry.notes,
                 entry.confidence,
                 entry.raw_text,
+                entry.upload_id,
             ),
         )
         await db.commit()

@@ -65,6 +65,7 @@ function ReviewPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
 
   const uploadsQuery = useQuery({
     queryKey: ['uploads'],
@@ -87,6 +88,16 @@ function ReviewPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
       setEditingId(null)
+    },
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (data: { entry_type: string; subtype?: string | null; occurred_at: string; value?: number | null; notes?: string | null; upload_id?: number | null }) =>
+      api.post<Entry>('/api/entries', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
+      queryClient.invalidateQueries({ queryKey: ['uploads'] })
+      setIsAdding(false)
     },
   })
 
@@ -199,7 +210,7 @@ function ReviewPage() {
                       key={entry.id}
                       entry={entry}
                       isEditing={editingId === entry.id}
-                      onEdit={() => setEditingId(entry.id)}
+                      onEdit={() => { setEditingId(entry.id); setIsAdding(false) }}
                       onCancel={() => setEditingId(null)}
                       onSave={(data) =>
                         updateMutation.mutate({ id: entry.id, ...data })
@@ -224,6 +235,24 @@ function ReviewPage() {
 
             {entries.length === 0 && (
               <p className="text-gray-400 text-center mt-4">No entries found</p>
+            )}
+
+            {/* Add missing entry */}
+            {isAdding ? (
+              <AddEntryForm
+                defaultDate={entries.length > 0 ? entries[entries.length - 1].date : ''}
+                uploadId={uploadId!}
+                isSaving={createMutation.isPending}
+                onSave={(data) => createMutation.mutate(data)}
+                onCancel={() => setIsAdding(false)}
+              />
+            ) : (
+              <button
+                className="w-full mt-4 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 text-sm min-h-[44px] active:bg-gray-50"
+                onClick={() => { setIsAdding(true); setEditingId(null) }}
+              >
+                + Add missing entry
+              </button>
             )}
           </div>
         </>
@@ -417,6 +446,131 @@ function EntryCard({
           {entry.raw_text}
         </p>
       )}
+    </div>
+  )
+}
+
+function AddEntryForm({
+  defaultDate,
+  uploadId,
+  isSaving,
+  onSave,
+  onCancel,
+}: {
+  defaultDate: string
+  uploadId: number
+  isSaving: boolean
+  onSave: (data: { entry_type: string; subtype?: string | null; occurred_at: string; value?: number | null; notes?: string | null; upload_id: number }) => void
+  onCancel: () => void
+}) {
+  const [type, setType] = useState<EntryType>('feeding')
+  const [subtype, setSubtype] = useState('formula')
+  const [date, setDate] = useState(defaultDate)
+  const [time, setTime] = useState('')
+  const [value, setValue] = useState('')
+  const [notes, setNotes] = useState('')
+  const timeRef = useRef<HTMLInputElement>(null)
+
+  const occurredAt = date && time ? `${date} ${time}` : ''
+
+  return (
+    <div className="mt-4 rounded-lg border-2 border-dashed border-green-300 bg-green-50/50 p-3">
+      <div className="text-xs font-medium text-green-700 mb-2">New entry</div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <select
+          className="p-1 border rounded text-base min-h-[44px]"
+          value={type}
+          onChange={(e) => {
+            const newType = e.target.value as EntryType
+            setType(newType)
+            if (newType === 'feeding') setSubtype('formula')
+            else if (newType === 'diaper') setSubtype('pee')
+            else setSubtype('')
+          }}
+        >
+          {Object.entries(TYPE_LABELS).map(([val, label]) => (
+            <option key={val} value={val}>{label}</option>
+          ))}
+        </select>
+        {type === 'feeding' && (
+          <select
+            className="p-1 border rounded text-base min-h-[44px]"
+            value={subtype}
+            onChange={(e) => setSubtype(e.target.value)}
+          >
+            {FEEDING_SUBTYPES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
+        {type === 'diaper' && (
+          <select
+            className="p-1 border rounded text-base min-h-[44px]"
+            value={subtype}
+            onChange={(e) => setSubtype(e.target.value)}
+          >
+            {DIAPER_SUBTYPES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <input
+          type="date"
+          className="p-1 border rounded text-base min-h-[44px]"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <input
+          ref={timeRef}
+          type="time"
+          className="p-1 border rounded text-base min-h-[44px]"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          autoFocus
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <input
+          type="number"
+          className="p-1 border rounded text-base min-h-[44px]"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Value"
+        />
+        <input
+          type="text"
+          className="p-1 border rounded text-base min-h-[44px]"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Notes"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          className="px-3 py-1 text-sm bg-green-600 text-white rounded min-h-[44px] disabled:opacity-50"
+          disabled={!occurredAt || isSaving}
+          onClick={() =>
+            onSave({
+              entry_type: type,
+              subtype: subtype || null,
+              occurred_at: occurredAt,
+              value: value ? Number(value) : null,
+              notes: notes || null,
+              upload_id: uploadId,
+            })
+          }
+        >
+          Add Entry
+        </button>
+        <button
+          className="px-3 py-1 text-sm bg-gray-200 rounded min-h-[44px]"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
