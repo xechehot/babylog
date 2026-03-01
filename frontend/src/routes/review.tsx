@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { Entry, EntryType, Upload, UploadDetail } from '../types'
 
@@ -162,14 +162,11 @@ function ReviewPage() {
       {/* Split-screen layout */}
       {showSplitView && (
         <>
-          {/* Top panel: Image */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 pt-2">
-            <img
-              src={`${BASE_PATH}/api/uploads/${uploadId}/image`}
-              alt="Uploaded log"
-              className="w-full rounded-lg border border-gray-200"
-            />
-          </div>
+          {/* Top panel: Image with pinch-to-zoom */}
+          <PinchZoomImage
+            src={`${BASE_PATH}/api/uploads/${uploadId}/image`}
+            alt="Uploaded log"
+          />
 
           {/* Divider */}
           <div className="h-px bg-gray-300 shrink-0" />
@@ -419,6 +416,125 @@ function EntryCard({
         <p className="text-xs text-gray-400 mt-1 truncate" title={entry.raw_text}>
           {entry.raw_text}
         </p>
+      )}
+    </div>
+  )
+}
+
+function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [translate, setTranslate] = useState({ x: 0, y: 0 })
+  const gestureRef = useRef<{
+    initialDistance: number
+    initialScale: number
+    initialMid: { x: number; y: number }
+    lastMid: { x: number; y: number }
+    initialTranslate: { x: number; y: number }
+  } | null>(null)
+
+  const clampTranslate = useCallback(
+    (tx: number, ty: number, s: number) => {
+      if (s <= 1) return { x: 0, y: 0 }
+      const el = containerRef.current
+      if (!el) return { x: tx, y: ty }
+      const maxX = (el.scrollWidth * (s - 1)) / 2
+      const maxY = (el.scrollHeight * (s - 1)) / 2
+      return {
+        x: Math.max(-maxX, Math.min(maxX, tx)),
+        y: Math.max(-maxY, Math.min(maxY, ty)),
+      }
+    },
+    [],
+  )
+
+  const getDistance = (t1: Touch, t2: Touch) =>
+    Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+
+  const getMid = (t1: Touch, t2: Touch) => ({
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2,
+  })
+
+  const onTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const d = getDistance(e.touches[0], e.touches[1])
+        const mid = getMid(e.touches[0], e.touches[1])
+        gestureRef.current = {
+          initialDistance: d,
+          initialScale: scale,
+          initialMid: mid,
+          lastMid: mid,
+          initialTranslate: { ...translate },
+        }
+      }
+    },
+    [scale, translate],
+  )
+
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && gestureRef.current) {
+        e.preventDefault()
+        const g = gestureRef.current
+        const d = getDistance(e.touches[0], e.touches[1])
+        const mid = getMid(e.touches[0], e.touches[1])
+        const newScale = Math.max(1, Math.min(5, g.initialScale * (d / g.initialDistance)))
+        const dx = mid.x - g.initialMid.x
+        const dy = mid.y - g.initialMid.y
+        const newTranslate = clampTranslate(
+          g.initialTranslate.x + dx,
+          g.initialTranslate.y + dy,
+          newScale,
+        )
+        g.lastMid = mid
+        setScale(newScale)
+        setTranslate(newTranslate)
+      }
+    },
+    [clampTranslate],
+  )
+
+  const onTouchEnd = useCallback(() => {
+    gestureRef.current = null
+  }, [])
+
+  const resetZoom = useCallback(() => {
+    if (scale > 1) {
+      setScale(1)
+      setTranslate({ x: 0, y: 0 })
+    }
+  }, [scale])
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex-1 min-h-0 overflow-hidden p-4 pt-2 relative"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="w-full rounded-lg border border-gray-200"
+        draggable={false}
+        style={{
+          transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+          transformOrigin: 'center center',
+          transition: gestureRef.current ? 'none' : 'transform 0.2s ease-out',
+        }}
+      />
+      {scale > 1 && (
+        <button
+          className="absolute top-3 right-5 bg-black/50 text-white text-xs px-2 py-1 rounded"
+          onClick={resetZoom}
+        >
+          Reset zoom
+        </button>
       )}
     </div>
   )
