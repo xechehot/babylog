@@ -14,7 +14,7 @@ export default defineConfig({
       '/babylog/api': {
         target: 'http://localhost:3849',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/babylog\/api/, ''),
+        rewrite: (path) => path.replace(/^\/babylog/, ''),
       },
     },
   },

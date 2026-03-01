@@ -6,6 +6,8 @@ class EntryCreate(BaseModel):
     occurred_at: str
     value: float | None = None
     notes: str | None = None
+    confidence: str | None = None
+    raw_text: str | None = None
 
 
 class EntryUpdate(BaseModel):
@@ -23,6 +25,8 @@ class EntryResponse(BaseModel):
     date: str
     value: float | None = None
     notes: str | None = None
+    confidence: str | None = None
+    raw_text: str | None = None
     created_at: str
     updated_at: str
 

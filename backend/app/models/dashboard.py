@@ -7,6 +7,7 @@ class DashboardDay(BaseModel):
     feeding_count: int
     pee_count: int
     poo_count: int
+    diaper_dry_count: int
 
 
 class LatestWeight(BaseModel):

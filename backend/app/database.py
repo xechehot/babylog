@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS entries (
     date            TEXT NOT NULL,
     value           REAL,
     notes           TEXT,
+    confidence      TEXT,
+    raw_text        TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

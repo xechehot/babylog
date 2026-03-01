@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.models.entry import EntryResponse
+
 
 class UploadResponse(BaseModel):
     id: int
@@ -25,9 +27,8 @@ class UploadListResponse(BaseModel):
 class UploadDetailResponse(BaseModel):
     id: int
     filename: str
-    filepath: str
     status: str
     error_message: str | None = None
     created_at: str
     processed_at: str | None = None
-    entries: list[dict] = []
+    entries: list[EntryResponse] = []
