@@ -7,6 +7,7 @@ import { FeedingChart } from '../components/dashboard/FeedingChart'
 import { FeedingSpeedChart } from '../components/dashboard/FeedingSpeedChart'
 import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
+import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 
 export const Route = createFileRoute('/dashboard')({
@@ -33,6 +34,14 @@ function DashboardPage() {
     queryFn: () =>
       api.get<{ entries: Entry[] }>(
         `/api/entries?type=feeding&from_date=${from_date}&to_date=${to_date}`,
+      ),
+  })
+
+  const { data: diaperData } = useQuery({
+    queryKey: ['entries', { type: 'diaper', from_date, to_date }],
+    queryFn: () =>
+      api.get<{ entries: Entry[] }>(
+        `/api/entries?type=diaper&from_date=${from_date}&to_date=${to_date}`,
       ),
   })
 
@@ -84,6 +93,15 @@ function DashboardPage() {
             </h2>
             {days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}
           </section>
+
+          {diaperData && diaperData.entries.length > 0 && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">
+                Интервал пописов/покаков (ч)
+              </h2>
+              <DiaperGapChart entries={diaperData.entries} />
+            </section>
+          )}
 
           <TodaySummary data={todayData} />
         </>
