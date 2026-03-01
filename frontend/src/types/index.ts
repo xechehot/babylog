@@ -25,6 +25,7 @@ export interface Entry {
   notes: string | null
   confidence: Confidence | null
   raw_text: string | null
+  confirmed: boolean
   created_at: string
   updated_at: string
 }

@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS entries (
     confidence      TEXT,
     raw_text        TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    confirmed       INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
@@ -41,11 +42,23 @@ CREATE INDEX IF NOT EXISTS idx_entries_upload_id ON entries(upload_id);
 """
 
 
+async def _migrate(db: aiosqlite.Connection) -> None:
+    """Run migrations for columns added after initial schema."""
+    cursor = await db.execute("PRAGMA table_info(entries)")
+    columns = {row[1] for row in await cursor.fetchall()}
+    if "confirmed" not in columns:
+        await db.execute(
+            "ALTER TABLE entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0"
+        )
+        await db.commit()
+
+
 async def init_db() -> None:
     async with aiosqlite.connect(settings.database_path) as db:
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA foreign_keys=ON")
         await db.executescript(SCHEMA)
+        await _migrate(db)
         await db.commit()
 
 

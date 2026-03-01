@@ -17,6 +17,7 @@ class EntryUpdate(BaseModel):
     occurred_at: str | None = None
     value: float | None = None
     notes: str | None = None
+    confirmed: bool | None = None
 
 
 class EntryResponse(BaseModel):
@@ -30,6 +31,7 @@ class EntryResponse(BaseModel):
     notes: str | None = None
     confidence: str | None = None
     raw_text: str | None = None
+    confirmed: bool = False
     created_at: str
     updated_at: str
 

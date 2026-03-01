@@ -20,6 +20,7 @@ def _row_to_response(row) -> EntryResponse:
         notes=row["notes"],
         confidence=row["confidence"],
         raw_text=row["raw_text"],
+        confirmed=bool(row["confirmed"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -101,6 +102,8 @@ async def update_entry(entry_id: int, entry: EntryUpdate) -> EntryResponse:
             updates["value"] = entry.value
         if entry.notes is not None:
             updates["notes"] = entry.notes
+        if entry.confirmed is not None:
+            updates["confirmed"] = int(entry.confirmed)
 
         if updates:
             set_clause = ", ".join(f"{k}=?" for k in updates)

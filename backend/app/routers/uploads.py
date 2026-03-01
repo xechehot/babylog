@@ -122,6 +122,7 @@ async def get_upload(upload_id: int) -> UploadDetailResponse:
                 notes=e["notes"],
                 confidence=e["confidence"],
                 raw_text=e["raw_text"],
+                confirmed=bool(e["confirmed"]),
                 created_at=e["created_at"],
                 updated_at=e["updated_at"],
             )
