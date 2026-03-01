@@ -1,4 +1,14 @@
-const MONTH_SHORT_RU: Record<number, string> = {
+const DAY_NAMES_RU = [
+  'воскресенье',
+  'понедельник',
+  'вторник',
+  'среда',
+  'четверг',
+  'пятница',
+  'суббота',
+]
+
+export const MONTH_SHORT_RU: Record<number, string> = {
   0: 'янв',
   1: 'фев',
   2: 'мар',
@@ -37,4 +47,10 @@ export function getDateRange(days: number): { from_date: string; to_date: string
 /** Returns today's date as YYYY-MM-DD in local timezone. */
 export function getTodayStr(): string {
   return formatISO(new Date())
+}
+
+/** Formats "2026-03-01" as "1 мар, суббота" */
+export function formatDateRuFull(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getDate()} ${MONTH_SHORT_RU[d.getMonth()]}, ${DAY_NAMES_RU[d.getDay()]}`
 }
