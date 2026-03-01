@@ -25,9 +25,12 @@ async def get_dashboard(
                 date,
                 SUM(CASE WHEN entry_type='feeding' THEN 1 ELSE 0 END) as feeding_count,
                 SUM(CASE WHEN entry_type='feeding' AND value IS NOT NULL THEN value ELSE 0 END) as feeding_total_ml,
-                SUM(CASE WHEN entry_type='pee' THEN 1 ELSE 0 END) as pee_count,
-                SUM(CASE WHEN entry_type='poo' THEN 1 ELSE 0 END) as poo_count,
-                SUM(CASE WHEN entry_type='diaper_dry' THEN 1 ELSE 0 END) as diaper_dry_count
+                SUM(CASE WHEN entry_type='feeding' AND subtype='breast' AND value IS NOT NULL THEN value ELSE 0 END) as feeding_breast_ml,
+                SUM(CASE WHEN entry_type='feeding' AND subtype='formula' AND value IS NOT NULL THEN value ELSE 0 END) as feeding_formula_ml,
+                SUM(CASE WHEN entry_type='diaper' AND subtype='pee' THEN 1 ELSE 0 END) as diaper_pee_count,
+                SUM(CASE WHEN entry_type='diaper' AND subtype='poo' THEN 1 ELSE 0 END) as diaper_poo_count,
+                SUM(CASE WHEN entry_type='diaper' AND subtype='dry' THEN 1 ELSE 0 END) as diaper_dry_count,
+                SUM(CASE WHEN entry_type='diaper' AND subtype='pee+poo' THEN 1 ELSE 0 END) as diaper_pee_poo_count
             FROM entries
             WHERE date >= ? AND date <= ?
             GROUP BY date
@@ -54,9 +57,12 @@ async def get_dashboard(
             date=row["date"],
             feeding_total_ml=row["feeding_total_ml"] or 0,
             feeding_count=row["feeding_count"],
-            pee_count=row["pee_count"],
-            poo_count=row["poo_count"],
+            feeding_breast_ml=row["feeding_breast_ml"] or 0,
+            feeding_formula_ml=row["feeding_formula_ml"] or 0,
+            diaper_pee_count=row["diaper_pee_count"],
+            diaper_poo_count=row["diaper_poo_count"],
             diaper_dry_count=row["diaper_dry_count"],
+            diaper_pee_poo_count=row["diaper_pee_poo_count"],
         )
         for row in day_rows
     ]

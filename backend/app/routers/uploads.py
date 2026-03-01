@@ -115,6 +115,7 @@ async def get_upload(upload_id: int) -> UploadDetailResponse:
                 id=e["id"],
                 upload_id=e["upload_id"],
                 entry_type=e["entry_type"],
+                subtype=e["subtype"],
                 occurred_at=e["occurred_at"],
                 date=e["date"],
                 value=e["value"],

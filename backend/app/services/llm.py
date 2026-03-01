@@ -31,31 +31,38 @@ weight measurements, and other care events. The logs are written in Russian with
 
 ### Event Types
 
-| entry_type   | Russian Patterns                                                              |
-|--------------|-------------------------------------------------------------------------------|
-| feeding      | "поел Xмл", "поел X мл", any feeding entry with quantity in ml               |
-| pee          | "памперс моча", "памперс мокр", "п. моча"                                    |
-| poo          | "памперс кака", "памперс кал", "п. кака", "памперс моча с переодеванием"     |
-| diaper_dry   | "памперс сухой", "сухой памперс", "памперс сух"                              |
-| weight       | "вес", "взвешивание", with value in кг or гр                                  |
+There are exactly 3 entry types: `feeding`, `diaper`, `weight`. Each entry also has a `subtype` field.
+
+| entry_type | subtype    | Russian Patterns                                                          |
+|------------|------------|---------------------------------------------------------------------------|
+| feeding    | breast     | "маминого", "мамы", "мамино" — breast milk feeding                        |
+| feeding    | formula    | "смеси", "смесь", or any feeding without explicit breast milk mention     |
+| diaper     | pee        | "памперс моча", "памперс мокр", "п. моча"                                |
+| diaper     | poo        | "памперс кака", "памперс кал", "п. кака"                                 |
+| diaper     | dry        | "памперс сухой", "сухой памперс", "памперс сух"                          |
+| diaper     | pee+poo    | "памперс моча кака", both pee and poo on one diaper line                  |
+| weight     | null       | "вес", "взвешивание", with value in кг or гр                              |
 
 ### Feedings
 - Extract numeric values in milliliters (ml / мл).
-- If breast milk ("маминого", "мамы", "мамино") → set notes="маминого"
-- If formula ("смеси", "смесь") → set notes="смеси"
+- If breast milk ("маминого", "мамы", "мамино") → subtype="breast"
+- If formula ("смеси", "смесь") or no explicit mention of breast milk → subtype="formula"
 - IMPORTANT: Mixed feedings like "поел 10мл+19мл" must be split into TWO separate feeding entries:
   one with value=10 and one with value=19. If one component is breast milk and another is formula,
-  label each accordingly in notes.
-- "поел 40мл маминого + 29мл смеси" → two entries: {value: 40, notes: "маминого"} and {value: 29, notes: "смеси"}
+  set the appropriate subtype for each.
+- "поел 40мл маминого + 29мл смеси" → two entries: {value: 40, subtype: "breast"} and {value: 29, subtype: "formula"}
+- When a feeding has no indication of type, default subtype to "formula".
 
 ### Weight
 - "вес X кг" → value in grams (multiply kg by 1000)
 - "вес X гр" or "вес Xг" → value in grams
+- subtype is always null for weight entries.
 
 ### Diapers
-- Wet diaper (pee): "памперс моча" → entry_type="pee", value=null
-- Dirty diaper (poo): "памперс кака" → entry_type="poo", value=null
-- Dry diaper: "памперс сухой" → entry_type="diaper_dry", value=null
+- Wet diaper (pee): "памперс моча" → entry_type="diaper", subtype="pee", value=null
+- Dirty diaper (poo): "памперс кака" → entry_type="diaper", subtype="poo", value=null
+- Dry diaper: "памперс сухой" → entry_type="diaper", subtype="dry", value=null
+- Both pee and poo: "памперс моча кака" → entry_type="diaper", subtype="pee+poo", value=null
 
 ### Multiple Events
 - If a single line contains multiple events (comma-separated or otherwise), create separate entries for each.
@@ -71,7 +78,8 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
 
 ```json
 {
-  "entry_type": "feeding | pee | poo | weight | diaper_dry",
+  "entry_type": "feeding | diaper | weight",
+  "subtype": "breast | formula | pee | poo | dry | pee+poo | null",
   "occurred_at": "YYYY-MM-DD HH:MM",
   "value": null,
   "notes": null,
@@ -151,7 +159,7 @@ class LLMService:
         if not isinstance(entries, list):
             raise ValueError(f"Expected JSON array, got {type(entries).__name__}")
 
-        valid_types = {"feeding", "pee", "poo", "weight", "diaper_dry"}
+        valid_types = {"feeding", "diaper", "weight"}
         validated = []
         for entry in entries:
             if entry.get("entry_type") not in valid_types:
@@ -160,6 +168,7 @@ class LLMService:
             validated.append(
                 {
                     "entry_type": entry["entry_type"],
+                    "subtype": entry.get("subtype"),
                     "occurred_at": entry["occurred_at"],
                     "value": entry.get("value"),
                     "notes": entry.get("notes"),

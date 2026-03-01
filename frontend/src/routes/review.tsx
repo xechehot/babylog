@@ -19,19 +19,27 @@ export const Route = createFileRoute('/review')({
 
 const TYPE_LABELS: Record<EntryType, string> = {
   feeding: 'Feeding',
-  pee: 'Pee',
-  poo: 'Poo',
+  diaper: 'Diaper',
   weight: 'Weight',
-  diaper_dry: 'Dry diaper',
 }
 
 const TYPE_ICONS: Record<EntryType, string> = {
   feeding: '\u{1F37C}',
-  pee: '\u{1F4A7}',
-  poo: '\u{1F4A9}',
+  diaper: '\u{1FA7B}',
   weight: '\u{2696}\u{FE0F}',
-  diaper_dry: '\u{2705}',
 }
+
+const SUBTYPE_LABELS: Record<string, string> = {
+  breast: 'breast',
+  formula: 'formula',
+  pee: 'pee',
+  poo: 'poo',
+  dry: 'dry',
+  'pee+poo': 'pee+poo',
+}
+
+const FEEDING_SUBTYPES = ['breast', 'formula'] as const
+const DIAPER_SUBTYPES = ['pee', 'poo', 'dry', 'pee+poo'] as const
 
 const CONFIDENCE_STYLES: Record<string, string> = {
   high: 'border-l-4 border-l-transparent',
@@ -61,7 +69,7 @@ function ReviewPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; entry_type?: string; occurred_at?: string; value?: number | null; notes?: string | null }) =>
+    mutationFn: ({ id, ...data }: { id: number; entry_type?: string; subtype?: string | null; occurred_at?: string; value?: number | null; notes?: string | null }) =>
       api.patch<Entry>(`/api/entries/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
@@ -211,11 +219,12 @@ function EntryCard({
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
-  onSave: (data: { entry_type?: string; occurred_at?: string; value?: number | null; notes?: string | null }) => void
+  onSave: (data: { entry_type?: string; subtype?: string | null; occurred_at?: string; value?: number | null; notes?: string | null }) => void
   onDelete: () => void
   isSaving: boolean
 }) {
   const [editType, setEditType] = useState(entry.entry_type)
+  const [editSubtype, setEditSubtype] = useState(entry.subtype ?? '')
   const [editTime, setEditTime] = useState(entry.occurred_at)
   const [editValue, setEditValue] = useState(entry.value?.toString() ?? '')
   const [editNotes, setEditNotes] = useState(entry.notes ?? '')
@@ -226,11 +235,17 @@ function EntryCard({
   if (isEditing) {
     return (
       <div className={`bg-white rounded-lg border border-blue-300 p-3 ${confidenceStyle}`}>
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-3 gap-2 mb-2">
           <select
             className="p-1 border rounded text-sm"
             value={editType}
-            onChange={(e) => setEditType(e.target.value as EntryType)}
+            onChange={(e) => {
+              const newType = e.target.value as EntryType
+              setEditType(newType)
+              if (newType === 'feeding') setEditSubtype('formula')
+              else if (newType === 'diaper') setEditSubtype('pee')
+              else setEditSubtype('')
+            }}
           >
             {Object.entries(TYPE_LABELS).map(([val, label]) => (
               <option key={val} value={val}>
@@ -238,6 +253,28 @@ function EntryCard({
               </option>
             ))}
           </select>
+          {editType === 'feeding' && (
+            <select
+              className="p-1 border rounded text-sm"
+              value={editSubtype}
+              onChange={(e) => setEditSubtype(e.target.value)}
+            >
+              {FEEDING_SUBTYPES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
+          {editType === 'diaper' && (
+            <select
+              className="p-1 border rounded text-sm"
+              value={editSubtype}
+              onChange={(e) => setEditSubtype(e.target.value)}
+            >
+              {DIAPER_SUBTYPES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             className="p-1 border rounded text-sm"
@@ -269,6 +306,7 @@ function EntryCard({
             onClick={() =>
               onSave({
                 entry_type: editType,
+                subtype: editSubtype || null,
                 occurred_at: editTime,
                 value: editValue ? Number(editValue) : null,
                 notes: editNotes || null,
@@ -299,6 +337,7 @@ function EntryCard({
           <span className="text-base">{icon}</span>
           <span className="text-sm font-medium">
             {TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
+            {entry.subtype && ` (${SUBTYPE_LABELS[entry.subtype] ?? entry.subtype})`}
           </span>
           {entry.value != null && (
             <span className="text-sm text-gray-600">

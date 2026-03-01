@@ -13,6 +13,7 @@ def _row_to_response(row) -> EntryResponse:
         id=row["id"],
         upload_id=row["upload_id"],
         entry_type=row["entry_type"],
+        subtype=row["subtype"],
         occurred_at=row["occurred_at"],
         date=row["date"],
         value=row["value"],
@@ -58,10 +59,11 @@ async def create_entry(entry: EntryCreate) -> EntryResponse:
 
     async with get_db() as db:
         cursor = await db.execute(
-            """INSERT INTO entries (entry_type, occurred_at, date, value, notes, confidence, raw_text)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO entries (entry_type, subtype, occurred_at, date, value, notes, confidence, raw_text)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 entry.entry_type,
+                entry.subtype,
                 entry.occurred_at,
                 date,
                 entry.value,
@@ -90,6 +92,8 @@ async def update_entry(entry_id: int, entry: EntryUpdate) -> EntryResponse:
         updates = {}
         if entry.entry_type is not None:
             updates["entry_type"] = entry.entry_type
+        if entry.subtype is not None:
+            updates["subtype"] = entry.subtype
         if entry.occurred_at is not None:
             updates["occurred_at"] = entry.occurred_at
             updates["date"] = entry.occurred_at[:10]

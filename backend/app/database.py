@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS entries (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     upload_id       INTEGER REFERENCES uploads(id) ON DELETE SET NULL,
     entry_type      TEXT NOT NULL,
+    subtype         TEXT,
     occurred_at     TEXT NOT NULL,
     date            TEXT NOT NULL,
     value           REAL,

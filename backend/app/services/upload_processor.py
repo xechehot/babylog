@@ -51,11 +51,12 @@ async def process_upload(upload_id: int) -> None:
                 date = entry["occurred_at"][:10]
                 await db.execute(
                     """INSERT INTO entries
-                       (upload_id, entry_type, occurred_at, date, value, notes, confidence, raw_text)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                       (upload_id, entry_type, subtype, occurred_at, date, value, notes, confidence, raw_text)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         upload_id,
                         entry["entry_type"],
+                        entry.get("subtype"),
                         entry["occurred_at"],
                         date,
                         entry.get("value"),
