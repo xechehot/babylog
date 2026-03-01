@@ -665,7 +665,7 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 min-h-0 overflow-hidden p-4 pt-2 relative"
+      className={`flex-1 min-h-0 ${scale > 1 ? 'overflow-hidden' : 'overflow-auto'} p-4 pt-2 relative`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
