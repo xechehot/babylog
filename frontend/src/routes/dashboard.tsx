@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import type { DashboardDay, DashboardResponse, Entry } from '../types'
 import { FeedingChart } from '../components/dashboard/FeedingChart'
 import { FeedingSpeedChart } from '../components/dashboard/FeedingSpeedChart'
+import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 
@@ -65,6 +66,15 @@ function DashboardPage() {
                 Скорость кормления (мл/ч)
               </h2>
               <FeedingSpeedChart entries={feedingData.entries} />
+            </section>
+          )}
+
+          {feedingData && feedingData.entries.length > 0 && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">
+                Интервал кормления (ч)
+              </h2>
+              <FeedingGapChart entries={feedingData.entries} />
             </section>
           )}
 
