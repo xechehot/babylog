@@ -16,6 +16,7 @@ class UploadListItem(BaseModel):
     status: str
     error_message: str | None = None
     entry_count: int = 0
+    date_counts: dict[str, int] = {}
     created_at: str
     processed_at: str | None = None
 

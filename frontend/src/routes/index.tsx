@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { api } from '../api/client'
 import type { Upload } from '../types'
+import { formatDateRu } from '../components/dashboard/utils'
 
 export const Route = createFileRoute('/')({
   component: UploadPage,
@@ -16,6 +17,17 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const UPLOAD_PENDING_KEY = 'babylog_upload_pending'
+
+function formatDateCounts(dateCounts: Record<string, number>): string {
+  const entries = Object.entries(dateCounts)
+  const MAX_DATES = 3
+  const parts = entries.slice(0, MAX_DATES).map(([date, count]) => `${formatDateRu(date)}: ${count}`)
+  let result = parts.join(' | ')
+  if (entries.length > MAX_DATES) {
+    result += ' ...'
+  }
+  return result
+}
 
 function UploadPage() {
   const queryClient = useQueryClient()
@@ -150,7 +162,9 @@ function UploadPage() {
                   </span>
                   {upload.status === 'done' && (
                     <span className="text-xs text-gray-500">
-                      {upload.entry_count} entries
+                      {upload.date_counts && Object.keys(upload.date_counts).length > 0
+                        ? formatDateCounts(upload.date_counts)
+                        : `${upload.entry_count} entries`}
                     </span>
                   )}
                   {upload.status === 'failed' && upload.error_message && (

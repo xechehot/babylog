@@ -10,6 +10,7 @@ export interface Upload {
   status: UploadStatus
   error_message: string | null
   entry_count?: number
+  date_counts?: Record<string, number>
   created_at: string
   processed_at: string | null
 }

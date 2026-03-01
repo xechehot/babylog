@@ -80,6 +80,22 @@ async def list_uploads(status: str | None = None) -> UploadListResponse:
         cursor = await db.execute(query, params)
         rows = await cursor.fetchall()
 
+        # Fetch per-date entry counts for all uploads in one query
+        upload_ids = [row["id"] for row in rows]
+        date_counts_map: dict[int, dict[str, int]] = {}
+        if upload_ids:
+            placeholders = ",".join("?" * len(upload_ids))
+            dc_cursor = await db.execute(
+                f"SELECT upload_id, date, COUNT(*) as cnt FROM entries"
+                f" WHERE upload_id IN ({placeholders})"
+                f" GROUP BY upload_id, date ORDER BY date",
+                upload_ids,
+            )
+            for dc_row in await dc_cursor.fetchall():
+                date_counts_map.setdefault(dc_row["upload_id"], {})[dc_row["date"]] = dc_row[
+                    "cnt"
+                ]
+
     return UploadListResponse(
         uploads=[
             UploadListItem(
@@ -88,6 +104,7 @@ async def list_uploads(status: str | None = None) -> UploadListResponse:
                 status=row["status"],
                 error_message=row["error_message"],
                 entry_count=row["entry_count"],
+                date_counts=date_counts_map.get(row["id"], {}),
                 created_at=row["created_at"],
                 processed_at=row["processed_at"],
             )
