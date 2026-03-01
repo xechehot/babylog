@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { api } from '../api/client'
 import type { Upload } from '../types'
 
@@ -14,6 +14,8 @@ const STATUS_COLORS: Record<string, string> = {
   done: 'bg-green-100 text-green-800',
   failed: 'bg-red-100 text-red-800',
 }
+
+const UPLOAD_PENDING_KEY = 'babylog_upload_pending'
 
 function UploadPage() {
   const queryClient = useQueryClient()
@@ -34,15 +36,44 @@ function UploadPage() {
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
+      sessionStorage.setItem(UPLOAD_PENDING_KEY, '1')
       const formData = new FormData()
       formData.append('file', file)
       return api.upload<Upload>('/api/uploads', formData)
     },
     onSuccess: () => {
+      sessionStorage.removeItem(UPLOAD_PENDING_KEY)
+      console.log('[upload] Upload succeeded')
       queryClient.invalidateQueries({ queryKey: ['uploads'] })
       if (fileInputRef.current) fileInputRef.current.value = ''
     },
+    onError: (error) => {
+      sessionStorage.removeItem(UPLOAD_PENDING_KEY)
+      console.error('[upload] Upload failed:', error.message)
+    },
   })
+
+  // Handle page restoration after iOS eviction (camera/gallery use)
+  useEffect(() => {
+    const recoverIfNeeded = () => {
+      if (sessionStorage.getItem(UPLOAD_PENDING_KEY)) {
+        console.log('[upload] Detected pending upload after page restore, refetching uploads')
+        sessionStorage.removeItem(UPLOAD_PENDING_KEY)
+        queryClient.invalidateQueries({ queryKey: ['uploads'] })
+      }
+    }
+
+    // Check on mount (handles full page reload after eviction)
+    recoverIfNeeded()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        recoverIfNeeded()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [queryClient])
 
   const reprocessMutation = useMutation({
     mutationFn: (id: number) => api.post<Upload>(`/api/uploads/${id}/reprocess`, {}),
@@ -53,7 +84,10 @@ function UploadPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) uploadMutation.mutate(file)
+    if (file) {
+      console.log('[upload] File selected:', file.name, `${(file.size / 1024 / 1024).toFixed(1)}MB`, file.type)
+      uploadMutation.mutate(file)
+    }
   }
 
   const uploads = uploadsQuery.data?.uploads ?? []
@@ -68,7 +102,6 @@ function UploadPage() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={handleFileChange}
           disabled={uploadMutation.isPending}

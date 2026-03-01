@@ -21,7 +21,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(error.detail ?? `Request failed: ${response.status}`)
+    const message = error.detail ?? `Request failed: ${response.status}`
+    console.error(`[api] ${method} ${path} failed:`, response.status, message)
+    throw new Error(message)
   }
 
   if (response.status === 204) {
@@ -32,17 +34,39 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
-  const response = await fetch(`${BASE_PATH}${path}`, {
-    method: 'POST',
-    body: formData,
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 120_000)
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }))
-    throw new Error(error.detail ?? `Upload failed: ${response.status}`)
+  console.log('[upload] Starting upload to', path)
+
+  try {
+    const response = await fetch(`${BASE_PATH}${path}`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    console.log('[upload] Response status:', response.status)
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      const message = error.detail ?? `Upload failed: ${response.status}`
+      console.error('[upload] Server error:', message)
+      throw new Error(message)
+    }
+
+    const data = (await response.json()) as T
+    console.log('[upload] Upload complete:', data)
+    return data
+  } catch (e) {
+    clearTimeout(timeout)
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('Upload timed out — please check your connection and try again')
+    }
+    throw e
   }
-
-  return response.json() as Promise<T>
 }
 
 export const api = {

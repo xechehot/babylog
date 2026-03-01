@@ -1,3 +1,4 @@
+import logging
 import uuid
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from app.models.upload import (
 )
 from app.services.upload_processor import process_upload
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 
@@ -31,6 +34,8 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
 
     content = await file.read()
     filepath.write_bytes(content)
+    size_mb = len(content) / 1024 / 1024
+    logger.info("Upload received: %s (%.1f MB)", file.filename, size_mb)
 
     # Insert DB record
     async with get_db() as db:
@@ -40,6 +45,8 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
         )
         await db.commit()
         upload_id = cursor.lastrowid
+
+    logger.info("Upload saved: id=%d filename=%s (%.1f MB)", upload_id, file.filename, size_mb)
 
     # Queue background processing
     background_tasks.add_task(process_upload, upload_id)
