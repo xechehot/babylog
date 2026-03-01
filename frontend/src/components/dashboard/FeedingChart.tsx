@@ -10,25 +10,27 @@ export function FeedingChart({ days }: FeedingChartProps) {
   if (count === 0) return null
 
   const barWidth = 24
-  const barGap = 4
-  const chartWidth = count * (barWidth + barGap) - barGap
+  const barGap = 16
+  const step = barWidth + barGap
+  const chartWidth = count * step - barGap
   const chartHeight = 140
   const topPad = 20
   const bottomPad = 30
   const totalHeight = topPad + chartHeight + bottomPad
-  const totalWidth = Math.max(chartWidth, 100)
+  const totalWidth = Math.max(chartWidth, 7 * step - barGap)
 
   const maxVal = Math.max(...days.map((d) => d.feeding_total_ml), 1)
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 overflow-x-auto">
       <svg
-        width="100%"
         viewBox={`0 0 ${totalWidth} ${totalHeight}`}
-        style={{ minWidth: count > 10 ? `${count * 28}px` : undefined }}
+        height={200}
+        preserveAspectRatio="xMinYEnd meet"
+        style={{ minWidth: count > 8 ? `${count * step}px` : undefined }}
       >
         {days.map((day, i) => {
-          const x = i * (barWidth + barGap)
+          const x = i * step
           const val = day.feeding_total_ml
           const barH = (val / maxVal) * chartHeight
           const barY = topPad + chartHeight - barH
