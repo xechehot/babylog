@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter
 
 from app.database import get_db
-from app.models.dashboard import DashboardDay, DashboardResponse, LatestWeight
+from app.models.dashboard import AllTimeTotals, DashboardDay, DashboardResponse, LatestWeight
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -52,6 +52,25 @@ async def get_dashboard(
         )
         weight_row = await cursor.fetchone()
 
+        # All-time totals
+        cursor = await db.execute(
+            """
+            SELECT
+                SUM(CASE WHEN entry_type='diaper'
+                    AND subtype != 'dry' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN entry_type='diaper'
+                    AND subtype IN ('pee','pee+poo') THEN 1 ELSE 0 END),
+                SUM(CASE WHEN entry_type='diaper'
+                    AND subtype IN ('poo','pee+poo') THEN 1 ELSE 0 END),
+                SUM(CASE WHEN entry_type='feeding'
+                    AND subtype='breast' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN entry_type='feeding'
+                    AND subtype='formula' THEN 1 ELSE 0 END)
+            FROM entries
+            """
+        )
+        totals_row = await cursor.fetchone()
+
     days = [
         DashboardDay(
             date=row["date"],
@@ -75,9 +94,20 @@ async def get_dashboard(
             date=weight_row["date"],
         )
 
+    all_time_totals = None
+    if totals_row and totals_row[0]:
+        all_time_totals = AllTimeTotals(
+            diaper_total=totals_row[0] or 0,
+            diaper_pee=totals_row[1] or 0,
+            diaper_poo=totals_row[2] or 0,
+            feeding_breast=totals_row[3] or 0,
+            feeding_formula=totals_row[4] or 0,
+        )
+
     return DashboardResponse(
         from_date=from_date,
         to_date=to_date,
         days=days,
         latest_weight=latest_weight,
+        all_time_totals=all_time_totals,
     )

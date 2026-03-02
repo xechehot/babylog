@@ -2,11 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '../api/client'
-import type { DashboardDay, DashboardResponse, Entry } from '../types'
+import type { AllTimeTotals as AllTimeTotalsData, DashboardDay, DashboardResponse, Entry } from '../types'
 import { FeedingChart } from '../components/dashboard/FeedingChart'
 import { FeedingSpeedChart } from '../components/dashboard/FeedingSpeedChart'
 import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
+import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 
@@ -61,6 +62,7 @@ function DashboardPage() {
       {data && (
         <>
           <WeightCard weight={data.latest_weight} />
+          <AllTimeTotals totals={data.all_time_totals} />
 
           <section>
             <h2 className="text-sm font-medium text-gray-500 mb-2">
@@ -84,6 +86,15 @@ function DashboardPage() {
                 Интервал кормления (ч)
               </h2>
               <FeedingGapChart entries={feedingData.entries} />
+            </section>
+          )}
+
+          {feedingData && feedingData.entries.length > 0 && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">
+                Интервал грудного вскармливания (ч)
+              </h2>
+              <BreastGapChart entries={feedingData.entries} />
             </section>
           )}
 
@@ -184,4 +195,89 @@ function TodaySummary({ data }: { data: DashboardDay | null }) {
 
 function EmptyState() {
   return <p className="text-gray-400 text-sm text-center py-8">Нет данных</p>
+}
+
+function nextBeautifulNumber(n: number): number {
+  const candidates: number[] = []
+  // Round numbers: 50, 100, 200, ..., 900, 1000, 2000, ...
+  candidates.push(50)
+  for (let base = 100; base <= 100000; base *= 10) {
+    for (let mult = 1; mult <= 9; mult++) {
+      candidates.push(base * mult)
+    }
+  }
+  // Repeating digits: 111, 222, ..., 999, 1111, 2222, ..., 9999, ...
+  for (let digits = 3; digits <= 5; digits++) {
+    const unit = Number('1'.repeat(digits))
+    for (let mult = 1; mult <= 9; mult++) {
+      candidates.push(unit * mult)
+    }
+  }
+  candidates.sort((a, b) => a - b)
+  return candidates.find((c) => c > n) ?? candidates[candidates.length - 1]
+}
+
+const THRESHOLD = 3
+
+function AllTimeTotals({ totals }: { totals: AllTimeTotalsData | null }) {
+  if (!totals) return null
+
+  const stats: { label: string; value: number; sub?: string }[] = [
+    { label: 'Подгузники', value: totals.diaper_total },
+    { label: 'пописал', value: totals.diaper_pee, sub: 'sub' },
+    { label: 'покакал', value: totals.diaper_poo, sub: 'sub' },
+    { label: 'Грудное', value: totals.feeding_breast },
+    { label: 'Смесь', value: totals.feeding_formula },
+  ]
+
+  const hints: string[] = []
+  for (const s of stats) {
+    const next = nextBeautifulNumber(s.value)
+    const remaining = next - s.value
+    if (remaining <= THRESHOLD) {
+      hints.push(`до ${next} ${s.label.toLowerCase()}: ${remaining === 0 ? 'сейчас!' : remaining}`)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">
+        Всего за всё время
+      </p>
+
+      <div className="space-y-2">
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold">{totals.diaper_total}</span>
+            <span className="text-sm text-gray-600">подгузников</span>
+          </div>
+          <div className="flex gap-4 ml-4 text-sm text-gray-500">
+            <span>пописал {totals.diaper_pee}</span>
+            <span>покакал {totals.diaper_poo}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-6">
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold">{totals.feeding_breast}</span>
+            <span className="text-sm text-gray-600">грудное</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold">{totals.feeding_formula}</span>
+            <span className="text-sm text-gray-600">смесь</span>
+          </div>
+        </div>
+      </div>
+
+      {hints.length > 0 && (
+        <div className="mt-3 pt-2 border-t border-gray-100">
+          {hints.map((hint) => (
+            <p key={hint} className="text-xs text-amber-600 font-medium">
+              {hint}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }

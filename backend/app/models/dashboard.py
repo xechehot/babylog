@@ -13,6 +13,14 @@ class DashboardDay(BaseModel):
     diaper_pee_poo_count: int
 
 
+class AllTimeTotals(BaseModel):
+    diaper_total: int
+    diaper_pee: int
+    diaper_poo: int
+    feeding_breast: int
+    feeding_formula: int
+
+
 class LatestWeight(BaseModel):
     value: float
     occurred_at: str
@@ -24,3 +32,4 @@ class DashboardResponse(BaseModel):
     to_date: str
     days: list[DashboardDay]
     latest_weight: LatestWeight | None = None
+    all_time_totals: AllTimeTotals | None = None

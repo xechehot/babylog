@@ -53,9 +53,18 @@ export interface DashboardDay {
   diaper_pee_poo_count: number
 }
 
+export interface AllTimeTotals {
+  diaper_total: number
+  diaper_pee: number
+  diaper_poo: number
+  feeding_breast: number
+  feeding_formula: number
+}
+
 export interface DashboardResponse {
   from_date: string
   to_date: string
   days: DashboardDay[]
   latest_weight: { value: number; occurred_at: string; date: string } | null
+  all_time_totals: AllTimeTotals | null
 }
