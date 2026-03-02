@@ -9,7 +9,7 @@ import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
-import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
+import { getDateRange, formatDateRu } from '../components/dashboard/utils'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
@@ -47,8 +47,14 @@ function DashboardPage() {
   })
 
   const days = data?.days ?? []
-  const todayStr = getTodayStr()
-  const todayData = days.find((d) => d.date === todayStr) ?? null
+  const yesterdayStr = getRelativeDateStr(-1)
+  const dayBeforeStr = getRelativeDateStr(-2)
+  const yesterdayData = days.find((d) => d.date === yesterdayStr) ?? null
+  const dayBeforeData = days.find((d) => d.date === dayBeforeStr) ?? null
+  const yesterdayFeedings = (feedingData?.entries ?? []).filter((e) => e.date === yesterdayStr)
+  const yesterdayDiapers = (diaperData?.entries ?? []).filter(
+    (e) => e.date === yesterdayStr && e.subtype !== 'dry',
+  )
 
   return (
     <div className="p-4 space-y-4">
@@ -61,7 +67,14 @@ function DashboardPage() {
 
       {data && (
         <>
-          <WeightCard weight={data.latest_weight} />
+          <YesterdaySummary
+            yesterday={yesterdayData}
+            dayBefore={dayBeforeData}
+            feedingEntries={yesterdayFeedings}
+            diaperEntries={yesterdayDiapers}
+            latestWeight={data.latest_weight}
+            previousWeight={data.previous_weight}
+          />
           <AllTimeTotals totals={data.all_time_totals} />
 
           <section>
@@ -113,8 +126,6 @@ function DashboardPage() {
               <DiaperGapChart entries={diaperData.entries} />
             </section>
           )}
-
-          <TodaySummary data={todayData} />
         </>
       )}
     </div>
@@ -145,50 +156,176 @@ function PeriodSelector({
   )
 }
 
-function WeightCard({
-  weight,
-}: {
-  weight: DashboardResponse['latest_weight']
-}) {
-  if (!weight) return null
+function getRelativeDateStr(offset: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
 
-  const kg = (weight.value / 1000).toFixed(2).replace(/\.?0+$/, '')
+function computeAvgInterval(entries: Entry[]): number | null {
+  if (entries.length < 2) return null
+  const sorted = [...entries].sort(
+    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime(),
+  )
+  const gaps: number[] = []
+  for (let i = 1; i < sorted.length; i++) {
+    const hours =
+      (new Date(sorted[i].occurred_at).getTime() - new Date(sorted[i - 1].occurred_at).getTime()) /
+      (1000 * 60 * 60)
+    if (hours >= 10 / 60) gaps.push(hours)
+  }
+  if (gaps.length === 0) return null
+  return gaps.reduce((s, g) => s + g, 0) / gaps.length
+}
+
+function pctChange(curr: number, prev: number): string | null {
+  if (prev === 0) return null
+  const pct = Math.round(((curr - prev) / prev) * 100)
+  return pct >= 0 ? `+${pct}%` : `${pct}%`
+}
+
+function PctBadge({ value }: { value: string | null }) {
+  if (!value) return null
+  const isPositive = value.startsWith('+')
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide">Последний вес</p>
-      <p className="text-2xl font-bold mt-1">{kg} кг</p>
-      <p className="text-xs text-gray-400 mt-1">{formatDateRu(weight.date)}</p>
-    </div>
+    <span className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
+      {value}
+    </span>
   )
 }
 
-function TodaySummary({ data }: { data: DashboardDay | null }) {
+function YesterdaySummary({
+  yesterday,
+  dayBefore,
+  feedingEntries,
+  diaperEntries,
+  latestWeight,
+  previousWeight,
+}: {
+  yesterday: DashboardDay | null
+  dayBefore: DashboardDay | null
+  feedingEntries: Entry[]
+  diaperEntries: Entry[]
+  latestWeight: DashboardResponse['latest_weight']
+  previousWeight: DashboardResponse['previous_weight']
+}) {
+  const weightKg = latestWeight
+    ? (latestWeight.value / 1000).toFixed(2).replace(/\.?0+$/, '')
+    : null
+  const weightDiffG =
+    latestWeight && previousWeight ? Math.round(latestWeight.value - previousWeight.value) : null
+  const weightDiffPct =
+    latestWeight && previousWeight ? pctChange(latestWeight.value, previousWeight.value) : null
+  const weightDiffStr =
+    weightDiffG != null ? (weightDiffG >= 0 ? `+${weightDiffG} г` : `${weightDiffG} г`) : null
+
+  if (!yesterday && !latestWeight) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Вчера</p>
+        <p className="text-gray-400 text-sm text-center">Нет данных</p>
+      </div>
+    )
+  }
+
+  const diaperTotal = yesterday
+    ? yesterday.diaper_pee_count + yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count
+    : 0
+  const diaperTotalPrev = dayBefore
+    ? dayBefore.diaper_pee_count + dayBefore.diaper_poo_count + dayBefore.diaper_pee_poo_count
+    : 0
+
+  const breastCount = feedingEntries.filter((e) => e.subtype === 'breast').length
+  const formulaCount = feedingEntries.filter((e) => e.subtype === 'formula').length
+
+  const feedingWithMl = feedingEntries.filter((e) => e.value != null && e.value > 0)
+  const avgFeedingInterval = computeAvgInterval(feedingWithMl)
+  const avgDiaperInterval = computeAvgInterval(diaperEntries)
+  const velocity = yesterday ? yesterday.feeding_total_ml / 24 : 0
+
+  const mlPct = dayBefore && yesterday ? pctChange(yesterday.feeding_total_ml, dayBefore.feeding_total_ml) : null
+  const diaperPct = dayBefore ? pctChange(diaperTotal, diaperTotalPrev) : null
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Сегодня</p>
-      {data ? (
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-lg font-bold">{data.feeding_count}</p>
-            <p className="text-xs text-gray-500">кормлений</p>
-            <p className="text-xs text-gray-400">{Math.round(data.feeding_total_ml)} мл</p>
+      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Вчера</p>
+
+      <div className="space-y-3">
+        {yesterday && (
+          <>
+            {/* Feedings */}
+            <div>
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold">{yesterday.feeding_count}</span>
+                  <span className="text-sm text-gray-600">кормлений</span>
+                  <span className="text-sm text-gray-400">{Math.round(yesterday.feeding_total_ml)} мл</span>
+                </div>
+                <PctBadge value={mlPct} />
+              </div>
+              <div className="flex gap-3 ml-4 text-sm text-gray-500">
+                <span>грудное {breastCount}</span>
+                <span>смесь {formulaCount}</span>
+              </div>
+            </div>
+
+            {/* Diapers */}
+            <div>
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold">{diaperTotal}</span>
+                  <span className="text-sm text-gray-600">подгузников</span>
+                </div>
+                <PctBadge value={diaperPct} />
+              </div>
+              <div className="flex gap-3 ml-4 text-sm text-gray-500">
+                <span>пописал {yesterday.diaper_pee_count + yesterday.diaper_pee_poo_count}</span>
+                <span>покакал {yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count}</span>
+              </div>
+            </div>
+
+            {/* Intervals & velocity */}
+            <div className="pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-lg font-bold">
+                  {avgFeedingInterval != null ? avgFeedingInterval.toFixed(1) : '—'}
+                </p>
+                <p className="text-xs text-gray-500">инт. корм. (ч)</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">
+                  {avgDiaperInterval != null ? avgDiaperInterval.toFixed(1) : '—'}
+                </p>
+                <p className="text-xs text-gray-500">инт. подг. (ч)</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{velocity > 0 ? velocity.toFixed(1) : '—'}</p>
+                <p className="text-xs text-gray-500">мл/ч</p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!yesterday && (
+          <p className="text-gray-400 text-sm text-center">Нет данных за вчера</p>
+        )}
+
+        {/* Weight */}
+        {latestWeight && (
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold">{weightKg} кг</span>
+                <span className="text-xs text-gray-400">{formatDateRu(latestWeight.date)}</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                {weightDiffStr && <span className="text-xs text-gray-500">{weightDiffStr}</span>}
+                <PctBadge value={weightDiffPct} />
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-lg font-bold">
-              {data.diaper_pee_count + data.diaper_pee_poo_count}
-            </p>
-            <p className="text-xs text-gray-500">пописал</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold">
-              {data.diaper_poo_count + data.diaper_pee_poo_count}
-            </p>
-            <p className="text-xs text-gray-500">покакал</p>
-          </div>
-        </div>
-      ) : (
-        <p className="text-gray-400 text-sm text-center">Нет данных</p>
-      )}
+        )}
+      </div>
     </div>
   )
 }

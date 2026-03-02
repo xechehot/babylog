@@ -47,10 +47,10 @@ async def get_dashboard(
             FROM entries
             WHERE entry_type='weight' AND value IS NOT NULL
             ORDER BY occurred_at DESC
-            LIMIT 1
+            LIMIT 2
             """
         )
-        weight_row = await cursor.fetchone()
+        weight_rows = await cursor.fetchall()
 
         # All-time totals
         cursor = await db.execute(
@@ -87,12 +87,19 @@ async def get_dashboard(
     ]
 
     latest_weight = None
-    if weight_row:
+    previous_weight = None
+    if weight_rows:
         latest_weight = LatestWeight(
-            value=weight_row["value"],
-            occurred_at=weight_row["occurred_at"],
-            date=weight_row["date"],
+            value=weight_rows[0]["value"],
+            occurred_at=weight_rows[0]["occurred_at"],
+            date=weight_rows[0]["date"],
         )
+        if len(weight_rows) > 1:
+            previous_weight = LatestWeight(
+                value=weight_rows[1]["value"],
+                occurred_at=weight_rows[1]["occurred_at"],
+                date=weight_rows[1]["date"],
+            )
 
     all_time_totals = None
     if totals_row and totals_row[0]:
@@ -109,5 +116,6 @@ async def get_dashboard(
         to_date=to_date,
         days=days,
         latest_weight=latest_weight,
+        previous_weight=previous_weight,
         all_time_totals=all_time_totals,
     )

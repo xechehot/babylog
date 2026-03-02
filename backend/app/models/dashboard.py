@@ -32,4 +32,5 @@ class DashboardResponse(BaseModel):
     to_date: str
     days: list[DashboardDay]
     latest_weight: LatestWeight | None = None
+    previous_weight: LatestWeight | None = None
     all_time_totals: AllTimeTotals | None = None

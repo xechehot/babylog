@@ -66,5 +66,6 @@ export interface DashboardResponse {
   to_date: string
   days: DashboardDay[]
   latest_weight: { value: number; occurred_at: string; date: string } | null
+  previous_weight: { value: number; occurred_at: string; date: string } | null
   all_time_totals: AllTimeTotals | null
 }
