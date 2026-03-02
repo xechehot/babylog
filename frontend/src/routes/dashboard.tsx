@@ -9,6 +9,13 @@ import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
+import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
+import {
+  computeDailyAvgFeedingInterval,
+  computeDailyAvgBreastInterval,
+  computeDailyAvgDiaperInterval,
+  computeDailyAvgFeedingSpeed,
+} from '../components/dashboard/dailyAggregates'
 import { getDateRange, formatDateRu } from '../components/dashboard/utils'
 
 export const Route = createFileRoute('/dashboard')({
@@ -85,30 +92,65 @@ function DashboardPage() {
           </section>
 
           {feedingData && feedingData.entries.length > 0 && (
-            <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">
-                Скорость кормления (мл/ч)
-              </h2>
-              <FeedingSpeedChart entries={feedingData.entries} />
-            </section>
-          )}
+            <>
+              {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
+                <section>
+                  <h2 className="text-sm font-medium text-gray-500 mb-2">
+                    Среднее потребление (мл/ч по дням)
+                  </h2>
+                  <DailyAvgBarChart
+                    data={computeDailyAvgFeedingSpeed(feedingData.entries)}
+                    color="fill-blue-400"
+                    formatValue={(v) => Math.round(v).toString()}
+                  />
+                </section>
+              )}
 
-          {feedingData && feedingData.entries.length > 0 && (
-            <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">
-                Интервал кормления (ч)
-              </h2>
-              <FeedingGapChart entries={feedingData.entries} />
-            </section>
-          )}
+              {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
+                <section>
+                  <h2 className="text-sm font-medium text-gray-500 mb-2">
+                    Средний интервал кормления (ч/день)
+                  </h2>
+                  <DailyAvgBarChart
+                    data={computeDailyAvgFeedingInterval(feedingData.entries)}
+                    color="fill-amber-400"
+                  />
+                </section>
+              )}
 
-          {feedingData && feedingData.entries.length > 0 && (
-            <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">
-                Интервал грудного вскармливания (ч)
-              </h2>
-              <BreastGapChart entries={feedingData.entries} />
-            </section>
+              <section>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">
+                  Скорость кормления (мл/ч)
+                </h2>
+                <FeedingSpeedChart entries={feedingData.entries} />
+              </section>
+
+              <section>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">
+                  Интервал кормления (ч)
+                </h2>
+                <FeedingGapChart entries={feedingData.entries} />
+              </section>
+
+              {computeDailyAvgBreastInterval(feedingData.entries).length > 0 && (
+                <section>
+                  <h2 className="text-sm font-medium text-gray-500 mb-2">
+                    Средний интервал грудного вскармливания (ч/день)
+                  </h2>
+                  <DailyAvgBarChart
+                    data={computeDailyAvgBreastInterval(feedingData.entries)}
+                    color="fill-pink-400"
+                  />
+                </section>
+              )}
+
+              <section>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">
+                  Интервал грудного вскармливания (ч)
+                </h2>
+                <BreastGapChart entries={feedingData.entries} />
+              </section>
+            </>
           )}
 
           <section>
@@ -119,12 +161,26 @@ function DashboardPage() {
           </section>
 
           {diaperData && diaperData.entries.length > 0 && (
-            <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">
-                Интервал пописов/покаков (ч)
-              </h2>
-              <DiaperGapChart entries={diaperData.entries} />
-            </section>
+            <>
+              {computeDailyAvgDiaperInterval(diaperData.entries).length > 0 && (
+                <section>
+                  <h2 className="text-sm font-medium text-gray-500 mb-2">
+                    Средний интервал подгузников (ч/день)
+                  </h2>
+                  <DailyAvgBarChart
+                    data={computeDailyAvgDiaperInterval(diaperData.entries)}
+                    color="fill-green-400"
+                  />
+                </section>
+              )}
+
+              <section>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">
+                  Интервал пописов/покаков (ч)
+                </h2>
+                <DiaperGapChart entries={diaperData.entries} />
+              </section>
+            </>
           )}
         </>
       )}
