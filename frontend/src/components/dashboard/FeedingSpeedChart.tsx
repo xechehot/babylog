@@ -1,5 +1,5 @@
 import type { Entry } from '../../types'
-import { formatDateRu } from './utils'
+import { formatDateRu, mergeCloseFeedings } from './utils'
 
 interface SpeedPoint {
   occurred_at: string
@@ -10,11 +10,7 @@ interface SpeedPoint {
 const MOVING_AVG_WINDOW = 8
 
 function computeSpeedPoints(entries: Entry[]): SpeedPoint[] {
-  // Filter to feedings with a positive value, sorted by time
-  const feedings = entries
-    .filter((e) => e.entry_type === 'feeding' && e.value != null && e.value > 0)
-    .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
-
+  const feedings = mergeCloseFeedings(entries)
   const points: SpeedPoint[] = []
 
   for (let i = 1; i < feedings.length; i++) {
@@ -22,10 +18,7 @@ function computeSpeedPoints(entries: Entry[]): SpeedPoint[] {
     const curr = new Date(feedings[i].occurred_at).getTime()
     const hoursGap = (curr - prev) / (1000 * 60 * 60)
 
-    // Skip if gap is too short (< 10 min) — likely data entry issue
-    if (hoursGap < 10 / 60) continue
-
-    const speed = feedings[i].value! / hoursGap
+    const speed = feedings[i].value / hoursGap
     points.push({
       occurred_at: feedings[i].occurred_at,
       date: feedings[i].date,

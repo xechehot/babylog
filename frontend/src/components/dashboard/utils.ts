@@ -1,3 +1,57 @@
+import type { Entry } from '../../types'
+
+const MERGE_GAP_MINUTES = 20
+
+interface MergedFeeding {
+  occurred_at: string
+  date: string
+  value: number
+}
+
+/**
+ * Merge feedings that are within MERGE_GAP_MINUTES of each other into a single
+ * feeding session. Sums ml values and uses the last entry's timestamp/date.
+ * Only considers feedings with a positive value.
+ */
+export function mergeCloseFeedings(entries: Entry[]): MergedFeeding[] {
+  const feedings = entries
+    .filter((e) => e.entry_type === 'feeding' && e.value != null && e.value > 0)
+    .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
+
+  if (feedings.length === 0) return []
+
+  const merged: MergedFeeding[] = []
+  let groupValue = feedings[0].value!
+  let groupEnd = feedings[0]
+
+  for (let i = 1; i < feedings.length; i++) {
+    const prevTime = new Date(groupEnd.occurred_at).getTime()
+    const currTime = new Date(feedings[i].occurred_at).getTime()
+    const gapMinutes = (currTime - prevTime) / (1000 * 60)
+
+    if (gapMinutes <= MERGE_GAP_MINUTES) {
+      groupValue += feedings[i].value!
+      groupEnd = feedings[i]
+    } else {
+      merged.push({
+        occurred_at: groupEnd.occurred_at,
+        date: groupEnd.date,
+        value: groupValue,
+      })
+      groupValue = feedings[i].value!
+      groupEnd = feedings[i]
+    }
+  }
+
+  merged.push({
+    occurred_at: groupEnd.occurred_at,
+    date: groupEnd.date,
+    value: groupValue,
+  })
+
+  return merged
+}
+
 const DAY_NAMES_RU = [
   'воскресенье',
   'понедельник',
