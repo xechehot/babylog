@@ -44,30 +44,19 @@ export function computeDailyAvgDiaperInterval(entries: Entry[]): DailyValue[] {
 }
 
 /**
- * Average feeding speed per day (ml/h).
- * Merges close feedings into sessions, then speed = ml / gap_hours between sessions.
+ * Average feeding speed per day (ml/h) = total_ml / 24.
  */
 export function computeDailyAvgFeedingSpeed(entries: Entry[]): DailyValue[] {
-  const feedings = mergeCloseFeedings(entries)
-  const byDate = new Map<string, number[]>()
+  const byDate = new Map<string, number>()
 
-  for (let i = 1; i < feedings.length; i++) {
-    const prev = new Date(feedings[i - 1].occurred_at).getTime()
-    const curr = new Date(feedings[i].occurred_at).getTime()
-    const hours = (curr - prev) / (1000 * 60 * 60)
-
-    const speed = feedings[i].value / hours
-    const date = feedings[i].date
-    if (!byDate.has(date)) byDate.set(date, [])
-    byDate.get(date)!.push(speed)
+  for (const e of entries) {
+    if (e.entry_type !== 'feeding' || e.value == null || e.value <= 0) continue
+    byDate.set(e.date, (byDate.get(e.date) ?? 0) + e.value)
   }
 
   return [...byDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, speeds]) => ({
-      date,
-      value: speeds.reduce((s, v) => s + v, 0) / speeds.length,
-    }))
+    .map(([date, totalMl]) => ({ date, value: totalMl / 24 }))
 }
 
 function averageGapsByDate(sorted: { occurred_at: string; date: string }[]): DailyValue[] {
