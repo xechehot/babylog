@@ -10,6 +10,7 @@ import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
+import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
@@ -93,6 +94,13 @@ function DashboardPage() {
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
+              <section>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">
+                  Кормления по часам
+                </h2>
+                <FeedingByHourChart entries={feedingData.entries} />
+              </section>
+
               {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
                 <section>
                   <h2 className="text-sm font-medium text-gray-500 mb-2">
