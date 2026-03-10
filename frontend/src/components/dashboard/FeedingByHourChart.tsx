@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { Bar } from 'react-chartjs-2'
 import type { Entry } from '../../types'
+import { baseBarOptions, COLORS } from './chartConfig'
 
 type Filter = 'all' | 'formula' | 'breast'
 
@@ -10,25 +12,55 @@ interface FeedingByHourChartProps {
 export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
   const [filter, setFilter] = useState<Filter>('all')
 
-  const filtered =
-    filter === 'all' ? entries : entries.filter((e) => e.subtype === filter)
+  const { chartData, options } = useMemo(() => {
+    const filtered =
+      filter === 'all' ? entries : entries.filter((e) => e.subtype === filter)
 
-  const counts = new Array(24).fill(0)
-  for (const e of filtered) {
-    const hour = new Date(e.occurred_at).getHours()
-    counts[hour]++
-  }
+    const counts = new Array(24).fill(0) as number[]
+    for (const e of filtered) {
+      const hour = new Date(e.occurred_at).getHours()
+      counts[hour]++
+    }
 
-  const maxVal = Math.max(...counts, 1)
+    const color = filter === 'breast' ? COLORS.purple400 : COLORS.blue400
 
-  const barWidth = 12
-  const barGap = 4
-  const step = barWidth + barGap
-  const chartWidth = 24 * step - barGap
-  const chartHeight = 120
-  const topPad = 20
-  const bottomPad = 20
-  const totalHeight = topPad + chartHeight + bottomPad
+    const data = {
+      labels: Array.from({ length: 24 }, (_, i) => i.toString()),
+      datasets: [
+        {
+          data: counts,
+          backgroundColor: color,
+          borderRadius: 2,
+          datalabels: {
+            display: (ctx: { dataIndex: number }) => counts[ctx.dataIndex] > 0,
+            anchor: 'end' as const,
+            align: 'top' as const,
+            color: '#6b7280',
+            font: { size: 9 },
+          },
+        },
+      ],
+    }
+
+    const opts = {
+      ...baseBarOptions(),
+      layout: { padding: { top: 12 } },
+    }
+    opts.scales = {
+      ...opts.scales,
+      x: {
+        ...opts.scales!.x,
+        ticks: {
+          ...opts.scales!.x!.ticks,
+          callback: function (_value: string | number, index: number) {
+            return index % 3 === 0 ? index.toString() : ''
+          },
+        },
+      },
+    }
+
+    return { chartData: data, options: opts }
+  }, [entries, filter])
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3">
@@ -47,49 +79,7 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
           </button>
         ))}
       </div>
-      <svg viewBox={`0 0 ${chartWidth} ${totalHeight}`} className="w-full">
-        {counts.map((count, hour) => {
-          const x = hour * step
-          const barH = (count / maxVal) * chartHeight
-          const barY = topPad + chartHeight - barH
-          const color = filter === 'breast' ? 'fill-purple-400' : 'fill-blue-400'
-
-          return (
-            <g key={hour}>
-              <rect
-                x={x}
-                y={barY}
-                width={barWidth}
-                height={barH}
-                rx={2}
-                className={color}
-              />
-              {count > 0 && (
-                <text
-                  x={x + barWidth / 2}
-                  y={barY - 3}
-                  textAnchor="middle"
-                  className="fill-gray-500"
-                  fontSize={7}
-                >
-                  {count}
-                </text>
-              )}
-              {hour % 3 === 0 && (
-                <text
-                  x={x + barWidth / 2}
-                  y={topPad + chartHeight + 12}
-                  textAnchor="middle"
-                  className="fill-gray-400"
-                  fontSize={7}
-                >
-                  {hour}
-                </text>
-              )}
-            </g>
-          )
-        })}
-      </svg>
+      <Bar data={chartData} options={options} />
     </div>
   )
 }

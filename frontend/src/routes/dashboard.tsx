@@ -1,3 +1,4 @@
+import '../components/dashboard/chartSetup'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -11,6 +12,7 @@ import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
+import { COLORS } from '../components/dashboard/chartConfig'
 import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
@@ -108,7 +110,7 @@ function DashboardPage() {
                   </h2>
                   <DailyAvgBarChart
                     data={computeDailyAvgFeedingSpeed(feedingData.entries)}
-                    color="fill-blue-400"
+                    color={COLORS.blue400}
                     formatValue={(v) => Math.round(v).toString()}
                   />
                 </section>
@@ -121,7 +123,7 @@ function DashboardPage() {
                   </h2>
                   <DailyAvgBarChart
                     data={computeDailyAvgFeedingInterval(feedingData.entries)}
-                    color="fill-amber-400"
+                    color={COLORS.amber400}
                   />
                 </section>
               )}
@@ -147,7 +149,7 @@ function DashboardPage() {
                   </h2>
                   <DailyAvgBarChart
                     data={computeDailyAvgBreastInterval(feedingData.entries)}
-                    color="fill-pink-400"
+                    color={COLORS.pink400}
                   />
                 </section>
               )}
@@ -177,7 +179,7 @@ function DashboardPage() {
                   </h2>
                   <DailyAvgBarChart
                     data={computeDailyAvgDiaperInterval(diaperData.entries)}
-                    color="fill-green-400"
+                    color={COLORS.green400}
                   />
                 </section>
               )}
