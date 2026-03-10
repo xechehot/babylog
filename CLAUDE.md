@@ -19,6 +19,9 @@ Lint: `cd backend && uv run ruff check app/`
 Format: `cd backend && uv run ruff format app/`
 Type check: `cd backend && uv run mypy app/`
 Tests: `cd backend && uv run pytest`
+Single test: `cd backend && uv run pytest tests/test_dashboard_diapers.py::test_name -v`
+
+Tests use `httpx.AsyncClient` with `ASGITransport`, auto-patched to a temp SQLite DB per test (see `conftest.py`).
 
 ### Frontend (React 19 + Vite 7 + TypeScript)
 ```bash
@@ -38,7 +41,7 @@ Upload photo → `POST /api/uploads` → saved to disk, DB record created (statu
 - `diaper` with subtype `pee` | `poo` | `dry` | `pee+poo` — no value
 - `weight` — value in grams (displayed as kg in UI)
 
-Entries also carry `confidence` (high/medium/low) and `raw_text` from LLM parsing.
+Entries also carry `confidence` (high/medium/low), `raw_text` from LLM parsing, and `confirmed` (bool, default false — toggled by user on Review page).
 
 ### Backend Structure
 - `app/main.py` — FastAPI app, CORS, lifespan (DB init + crash recovery), mounts routers
@@ -57,6 +60,13 @@ Ruff config: py312, line-length 100, select E/F/I/N/W/UP.
 - `src/types/index.ts` — TypeScript interfaces matching backend models
 - Bottom tab navigation: Upload (`/`), Log (`/log`), Review (`/review`), Dashboard (`/dashboard`)
 - Mobile-first, Tailwind CSS v4
+- All charts are hand-crafted SVG (no chart library) in `src/components/dashboard/`
+- Dashboard uses feeding session merging (20-min window) for velocity/gap calculations — see `mergeCloseFeedings()` in `utils.ts`
+
+### Key Conventions
+- `pee+poo` diaper counting: backend returns raw `diaper_pee_poo_count`; frontend adds it to both wet and dirty totals
+- iOS PWA: `sessionStorage` flag `babylog_upload_pending` survives page eviction from camera; `visibilitychange` event triggers re-fetch
+- Deployment: `tail_serve.sh` sets up Tailscale Serve routes for both frontend and backend
 
 ### Tailscale Serve / Path Routing
 Both frontend and backend are designed for Tailscale Serve with path-based routing:
