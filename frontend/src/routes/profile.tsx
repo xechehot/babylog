@@ -8,7 +8,7 @@ export const Route = createFileRoute('/profile')({
 
 function ProfilePage() {
   const navigate = useNavigate()
-  const { profile, setProfile, isLoaded } = useProfile()
+  const { profile, isLoaded, saveProfile, isSaving } = useProfile()
 
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -17,17 +17,17 @@ function ProfilePage() {
   // Populate form when profile loads
   useEffect(() => {
     if (isLoaded) {
-      setName(profile.name)
-      setBirthDate(profile.birthDate)
-      setBirthWeight(profile.birthWeight ? String(profile.birthWeight) : '')
+      setName(profile.baby_name ?? '')
+      setBirthDate(profile.birth_date ?? '')
+      setBirthWeight(profile.birth_weight ? String(profile.birth_weight) : '')
     }
   }, [isLoaded, profile])
 
-  const handleSave = () => {
-    setProfile({
-      name: name.trim(),
-      birthDate,
-      birthWeight: birthWeight ? parseInt(birthWeight, 10) : null,
+  const handleSave = async () => {
+    await saveProfile({
+      baby_name: name.trim() || null,
+      birth_date: birthDate || null,
+      birth_weight: birthWeight ? parseInt(birthWeight, 10) : null,
     })
     navigate({ to: '/' })
   }
@@ -130,9 +130,10 @@ function ProfilePage() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors"
+          disabled={isSaving}
+          className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50"
         >
-          Сохранить
+          {isSaving ? 'Сохранение...' : 'Сохранить'}
         </button>
       </div>
     </div>

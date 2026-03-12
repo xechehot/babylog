@@ -1,55 +1,36 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '../api/client'
 
 export interface BabyProfile {
-  name: string
-  birthDate: string // YYYY-MM-DD
-  birthWeight: number | null // grams
+  baby_name: string | null
+  birth_date: string | null // YYYY-MM-DD
+  birth_weight: number | null // grams
 }
 
-const STORAGE_KEY = 'babylog_profile'
-
-const defaultProfile: BabyProfile = {
-  name: '',
-  birthDate: '',
-  birthWeight: null,
-}
+const PROFILE_KEY = ['settings']
 
 export function useProfile() {
-  const [profile, setProfileState] = useState<BabyProfile>(defaultProfile)
-  const [isLoaded, setIsLoaded] = useState(false)
+  const queryClient = useQueryClient()
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored) as Partial<BabyProfile>
-        setProfileState({ ...defaultProfile, ...parsed })
-      }
-    } catch (e) {
-      console.error('Failed to load profile:', e)
-    }
-    setIsLoaded(true)
-  }, [])
+  const { data: profile, isLoading } = useQuery({
+    queryKey: PROFILE_KEY,
+    queryFn: () => api.get<BabyProfile>('/api/settings'),
+  })
 
-  const setProfile = useCallback((updates: Partial<BabyProfile>) => {
-    setProfileState((prev) => {
-      const next = { ...prev, ...updates }
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-      } catch (e) {
-        console.error('Failed to save profile:', e)
-      }
-      return next
-    })
-  }, [])
+  const mutation = useMutation({
+    mutationFn: (updates: Partial<BabyProfile>) =>
+      api.put<BabyProfile>('/api/settings', updates),
+    onSuccess: (data) => {
+      queryClient.setQueryData(PROFILE_KEY, data)
+    },
+  })
 
-  const clearProfile = useCallback(() => {
-    setProfileState(defaultProfile)
-    localStorage.removeItem(STORAGE_KEY)
-  }, [])
-
-  return { profile, setProfile, clearProfile, isLoaded }
+  return {
+    profile: profile ?? { baby_name: null, birth_date: null, birth_weight: null },
+    isLoaded: !isLoading,
+    saveProfile: mutation.mutateAsync,
+    isSaving: mutation.isPending,
+  }
 }
 
 // Calculate age in days from birth date
