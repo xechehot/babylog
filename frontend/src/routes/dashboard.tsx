@@ -10,6 +10,7 @@ import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
+import { WeightChart } from '../components/dashboard/WeightChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
@@ -53,6 +54,14 @@ function DashboardPage() {
     queryFn: () =>
       api.get<{ entries: Entry[] }>(
         `/api/entries?type=diaper&from_date=${from_date}&to_date=${to_date}`,
+      ),
+  })
+
+  const { data: weightData } = useQuery({
+    queryKey: ['entries', { type: 'weight', from_date, to_date }],
+    queryFn: () =>
+      api.get<{ entries: Entry[] }>(
+        `/api/entries?type=weight&from_date=${from_date}&to_date=${to_date}`,
       ),
   })
 
@@ -191,6 +200,13 @@ function DashboardPage() {
                 <DiaperGapChart entries={diaperData.entries} />
               </section>
             </>
+          )}
+
+          {weightData && weightData.entries.length >= 2 && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес (г)</h2>
+              <WeightChart entries={weightData.entries} />
+            </section>
           )}
         </>
       )}
