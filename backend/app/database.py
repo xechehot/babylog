@@ -47,9 +47,7 @@ async def _migrate(db: aiosqlite.Connection) -> None:
     cursor = await db.execute("PRAGMA table_info(entries)")
     columns = {row[1] for row in await cursor.fetchall()}
     if "confirmed" not in columns:
-        await db.execute(
-            "ALTER TABLE entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0"
-        )
+        await db.execute("ALTER TABLE entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0")
         await db.commit()
 
 

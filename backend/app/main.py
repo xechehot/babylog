@@ -53,7 +53,10 @@ async def log_requests(request: Request, call_next):
     duration_ms = (time.monotonic() - start) * 1000
     logger.info(
         "%s %s %d %.0fms",
-        request.method, request.url.path, response.status_code, duration_ms,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
     )
     return response
 

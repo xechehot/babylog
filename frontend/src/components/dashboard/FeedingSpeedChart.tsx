@@ -100,9 +100,7 @@ export function FeedingSpeedChart({ entries }: FeedingSpeedChartProps) {
   )
 }
 
-function buildDeduplicatedLabels(
-  points: { date: string }[],
-): string[] {
+function buildDeduplicatedLabels(points: { date: string }[]): string[] {
   let lastDate = ''
   return points.map((p) => {
     if (p.date !== lastDate) {

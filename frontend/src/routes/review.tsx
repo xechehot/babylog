@@ -74,8 +74,18 @@ function ReviewPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: number; entry_type?: string; subtype?: string | null; occurred_at?: string; value?: number | null; notes?: string | null; confirmed?: boolean }) =>
-      api.patch<Entry>(`/api/entries/${id}`, data),
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: number
+      entry_type?: string
+      subtype?: string | null
+      occurred_at?: string
+      value?: number | null
+      notes?: string | null
+      confirmed?: boolean
+    }) => api.patch<Entry>(`/api/entries/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
       setEditingId(null)
@@ -83,8 +93,14 @@ function ReviewPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (data: { entry_type: string; subtype?: string | null; occurred_at: string; value?: number | null; notes?: string | null; upload_id?: number | null }) =>
-      api.post<Entry>('/api/entries', data),
+    mutationFn: (data: {
+      entry_type: string
+      subtype?: string | null
+      occurred_at: string
+      value?: number | null
+      notes?: string | null
+      upload_id?: number | null
+    }) => api.post<Entry>('/api/entries', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
       queryClient.invalidateQueries({ queryKey: ['uploads'] })
@@ -99,9 +115,7 @@ function ReviewPage() {
     },
   })
 
-  const doneUploads = (uploadsQuery.data?.uploads ?? []).filter(
-    (u) => u.status === 'done',
-  )
+  const doneUploads = (uploadsQuery.data?.uploads ?? []).filter((u) => u.status === 'done')
 
   const detail = detailQuery.data
   const entries = detail?.entries ?? []
@@ -142,9 +156,7 @@ function ReviewPage() {
       </div>
 
       {!uploadId && (
-        <p className="text-gray-400 text-center mt-8">
-          Select an upload to review its entries
-        </p>
+        <p className="text-gray-400 text-center mt-8">Select an upload to review its entries</p>
       )}
 
       {uploadId && detail?.status === 'processing' && (
@@ -156,19 +168,14 @@ function ReviewPage() {
       )}
 
       {uploadId && detail?.status === 'failed' && (
-        <p className="text-red-600 text-center mt-8">
-          Failed: {detail.error_message}
-        </p>
+        <p className="text-red-600 text-center mt-8">Failed: {detail.error_message}</p>
       )}
 
       {/* Split-screen layout */}
       {showSplitView && (
         <>
           {/* Top panel: Image with pinch-to-zoom */}
-          <PinchZoomImage
-            src={`${BASE_PATH}/api/uploads/${uploadId}/image`}
-            alt="Uploaded log"
-          />
+          <PinchZoomImage src={`${BASE_PATH}/api/uploads/${uploadId}/image`} alt="Uploaded log" />
 
           {/* Divider */}
           <div className="h-px bg-gray-300 shrink-0" />
@@ -201,11 +208,12 @@ function ReviewPage() {
                       key={entry.id}
                       entry={entry}
                       isEditing={editingId === entry.id}
-                      onEdit={() => { setEditingId(entry.id); setIsAdding(false) }}
+                      onEdit={() => {
+                        setEditingId(entry.id)
+                        setIsAdding(false)
+                      }}
                       onCancel={() => setEditingId(null)}
-                      onSave={(data) =>
-                        updateMutation.mutate({ id: entry.id, ...data })
-                      }
+                      onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
                       onConfirm={() =>
                         updateMutation.mutate({
                           id: entry.id,
@@ -240,7 +248,10 @@ function ReviewPage() {
             ) : (
               <button
                 className="w-full mt-4 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 text-sm min-h-[44px] active:bg-gray-50"
-                onClick={() => { setIsAdding(true); setEditingId(null) }}
+                onClick={() => {
+                  setIsAdding(true)
+                  setEditingId(null)
+                }}
               >
                 + Add missing entry
               </button>
@@ -266,7 +277,13 @@ function EntryCard({
   isEditing: boolean
   onEdit: () => void
   onCancel: () => void
-  onSave: (data: { entry_type?: string; subtype?: string | null; occurred_at?: string; value?: number | null; notes?: string | null }) => void
+  onSave: (data: {
+    entry_type?: string
+    subtype?: string | null
+    occurred_at?: string
+    value?: number | null
+    notes?: string | null
+  }) => void
   onConfirm: () => void
   onDelete: () => void
   isSaving: boolean
@@ -277,12 +294,9 @@ function EntryCard({
   const [editValue, setEditValue] = useState(entry.value?.toString() ?? '')
   const [editNotes, setEditNotes] = useState(entry.notes ?? '')
 
-  const confidenceStyle =
-    CONFIDENCE_STYLES[entry.confidence ?? 'high'] ?? CONFIDENCE_STYLES.high
+  const confidenceStyle = CONFIDENCE_STYLES[entry.confidence ?? 'high'] ?? CONFIDENCE_STYLES.high
 
-  const cardBg = entry.confirmed
-    ? 'bg-green-50 border-green-200'
-    : 'bg-white border-gray-200'
+  const cardBg = entry.confirmed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
 
   if (isEditing) {
     return (
@@ -312,7 +326,9 @@ function EntryCard({
               onChange={(e) => setEditSubtype(e.target.value)}
             >
               {FEEDING_SUBTYPES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           )}
@@ -323,7 +339,9 @@ function EntryCard({
               onChange={(e) => setEditSubtype(e.target.value)}
             >
               {DIAPER_SUBTYPES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           )}
@@ -367,10 +385,7 @@ function EntryCard({
           >
             Save
           </button>
-          <button
-            className="px-3 py-1 text-xs bg-gray-200 rounded"
-            onClick={onCancel}
-          >
+          <button className="px-3 py-1 text-xs bg-gray-200 rounded" onClick={onCancel}>
             Cancel
           </button>
         </div>
@@ -392,14 +407,10 @@ function EntryCard({
           </span>
           {entry.value != null && (
             <span className="text-sm text-gray-600">
-              {entry.entry_type === 'weight'
-                ? `${entry.value}g`
-                : `${entry.value}ml`}
+              {entry.entry_type === 'weight' ? `${entry.value}g` : `${entry.value}ml`}
             </span>
           )}
-          {entry.notes && (
-            <span className="text-xs text-gray-400 truncate">{entry.notes}</span>
-          )}
+          {entry.notes && <span className="text-xs text-gray-400 truncate">{entry.notes}</span>}
         </div>
         <div className="flex gap-1 shrink-0">
           {entry.confidence === 'low' && (
@@ -418,16 +429,10 @@ function EntryCard({
           >
             {'\u2713'}
           </button>
-          <button
-            className="px-2 py-1 text-xs text-gray-500 hover:text-blue-600"
-            onClick={onEdit}
-          >
+          <button className="px-2 py-1 text-xs text-gray-500 hover:text-blue-600" onClick={onEdit}>
             Edit
           </button>
-          <button
-            className="px-2 py-1 text-xs text-gray-500 hover:text-red-600"
-            onClick={onDelete}
-          >
+          <button className="px-2 py-1 text-xs text-gray-500 hover:text-red-600" onClick={onDelete}>
             Del
           </button>
         </div>
@@ -451,7 +456,14 @@ function AddEntryForm({
   defaultDate: string
   uploadId: number
   isSaving: boolean
-  onSave: (data: { entry_type: string; subtype?: string | null; occurred_at: string; value?: number | null; notes?: string | null; upload_id: number }) => void
+  onSave: (data: {
+    entry_type: string
+    subtype?: string | null
+    occurred_at: string
+    value?: number | null
+    notes?: string | null
+    upload_id: number
+  }) => void
   onCancel: () => void
 }) {
   const [type, setType] = useState<EntryType>('feeding')
@@ -480,7 +492,9 @@ function AddEntryForm({
           }}
         >
           {Object.entries(TYPE_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>{label}</option>
+            <option key={val} value={val}>
+              {label}
+            </option>
           ))}
         </select>
         {type === 'feeding' && (
@@ -490,7 +504,9 @@ function AddEntryForm({
             onChange={(e) => setSubtype(e.target.value)}
           >
             {FEEDING_SUBTYPES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         )}
@@ -501,7 +517,9 @@ function AddEntryForm({
             onChange={(e) => setSubtype(e.target.value)}
           >
             {DIAPER_SUBTYPES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
         )}
@@ -555,10 +573,7 @@ function AddEntryForm({
         >
           Add Entry
         </button>
-        <button
-          className="px-3 py-1 text-sm bg-gray-200 rounded min-h-[44px]"
-          onClick={onCancel}
-        >
+        <button className="px-3 py-1 text-sm bg-gray-200 rounded min-h-[44px]" onClick={onCancel}>
           Cancel
         </button>
       </div>
@@ -578,20 +593,17 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
     initialTranslate: { x: number; y: number }
   } | null>(null)
 
-  const clampTranslate = useCallback(
-    (tx: number, ty: number, s: number) => {
-      if (s <= 1) return { x: 0, y: 0 }
-      const el = containerRef.current
-      if (!el) return { x: tx, y: ty }
-      const maxX = (el.scrollWidth * (s - 1)) / 2
-      const maxY = (el.scrollHeight * (s - 1)) / 2
-      return {
-        x: Math.max(-maxX, Math.min(maxX, tx)),
-        y: Math.max(-maxY, Math.min(maxY, ty)),
-      }
-    },
-    [],
-  )
+  const clampTranslate = useCallback((tx: number, ty: number, s: number) => {
+    if (s <= 1) return { x: 0, y: 0 }
+    const el = containerRef.current
+    if (!el) return { x: tx, y: ty }
+    const maxX = (el.scrollWidth * (s - 1)) / 2
+    const maxY = (el.scrollHeight * (s - 1)) / 2
+    return {
+      x: Math.max(-maxX, Math.min(maxX, tx)),
+      y: Math.max(-maxY, Math.min(maxY, ty)),
+    }
+  }, [])
 
   const getDistance = (t1: React.Touch, t2: React.Touch) =>
     Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
