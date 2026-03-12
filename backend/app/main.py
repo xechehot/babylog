@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import get_db, init_db
 from app.routers import dashboard, entries, uploads
+from app.routers import settings as settings_router
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ async def log_requests(request: Request, call_next):
 app.include_router(uploads.router)
 app.include_router(entries.router)
 app.include_router(dashboard.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/health")
