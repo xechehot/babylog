@@ -124,7 +124,7 @@ class LLMService:
                 {
                     "role": "user",
                     "content": [
-                        {
+                        {  # type: ignore[list-item]
                             "type": "image",
                             "source": {
                                 "type": "base64",

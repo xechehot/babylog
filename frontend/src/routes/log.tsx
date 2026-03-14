@@ -129,9 +129,7 @@ function LogPage() {
 
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {entriesQuery.isLoading && (
-          <p className="text-gray-400 text-center mt-8">Загрузка...</p>
-        )}
+        {entriesQuery.isLoading && <p className="text-gray-400 text-center mt-8">Загрузка...</p>}
 
         {!entriesQuery.isLoading && entries.length === 0 && (
           <p className="text-gray-400 text-center mt-8">Нет записей за выбранный период</p>
@@ -142,11 +140,7 @@ function LogPage() {
           const dayEntries = grouped[date]
           return (
             <div key={date}>
-              <DayHeader
-                ref={isToday ? todayRef : undefined}
-                dateStr={date}
-                isToday={isToday}
-              />
+              <DayHeader ref={isToday ? todayRef : undefined} dateStr={date} isToday={isToday} />
               <div className="px-4 pb-2 space-y-1.5">
                 {[...dayEntries].reverse().map((entry) =>
                   editingId === entry.id ? (
@@ -194,11 +188,7 @@ function LogPage() {
       </div>
 
       {/* Add entry bottom sheet */}
-      <BottomSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        title="Новая запись"
-      >
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Новая запись">
         <EntryForm
           isSaving={createMutation.isPending}
           onSave={(data) => createMutation.mutate(data)}
@@ -218,9 +208,7 @@ const DayHeader = forwardRef<HTMLDivElement, { dateStr: string; isToday: boolean
       ref={ref}
       className="sticky top-[57px] z-20 bg-gray-100/95 backdrop-blur-sm px-4 py-2 flex items-center gap-2"
     >
-      <span className="text-sm font-semibold text-gray-600">
-        {formatDateRuFull(dateStr)}
-      </span>
+      <span className="text-sm font-semibold text-gray-600">{formatDateRuFull(dateStr)}</span>
       {isToday && (
         <span className="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">
           СЕГОДНЯ
@@ -260,9 +248,7 @@ function EntryRow({ entry, onTap }: { entry: Entry; onTap: () => void }) {
       <span className="text-base">{icon}</span>
       <span className="text-sm font-medium">{label}</span>
       {valueStr && <span className="text-sm text-gray-600">{valueStr}</span>}
-      {entry.notes && (
-        <span className="text-xs text-gray-400 truncate ml-auto">{entry.notes}</span>
-      )}
+      {entry.notes && <span className="text-xs text-gray-400 truncate ml-auto">{entry.notes}</span>}
     </button>
   )
 }
@@ -291,9 +277,7 @@ function InlineEditForm({
   const [editType, setEditType] = useState<EntryType>(entry.entry_type)
   const [editSubtype, setEditSubtype] = useState(entry.subtype ?? '')
   const [editDate, setEditDate] = useState(entry.date)
-  const [editTime, setEditTime] = useState(
-    entry.occurred_at.split(' ')[1]?.slice(0, 5) ?? '',
-  )
+  const [editTime, setEditTime] = useState(entry.occurred_at.split(' ')[1]?.slice(0, 5) ?? '')
   const [editValue, setEditValue] = useState(entry.value?.toString() ?? '')
   const [editNotes, setEditNotes] = useState(entry.notes ?? '')
 
@@ -390,16 +374,10 @@ function InlineEditForm({
         >
           Сохранить
         </button>
-        <button
-          className="px-4 py-2 text-sm bg-gray-200 rounded min-h-[44px]"
-          onClick={onCancel}
-        >
+        <button className="px-4 py-2 text-sm bg-gray-200 rounded min-h-[44px]" onClick={onCancel}>
           Отмена
         </button>
-        <button
-          className="px-4 py-2 text-sm text-red-600 ml-auto min-h-[44px]"
-          onClick={onDelete}
-        >
+        <button className="px-4 py-2 text-sm text-red-600 ml-auto min-h-[44px]" onClick={onDelete}>
           Удалить
         </button>
       </div>

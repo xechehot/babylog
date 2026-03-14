@@ -21,7 +21,9 @@ const UPLOAD_PENDING_KEY = 'babylog_upload_pending'
 function formatDateCounts(dateCounts: Record<string, number>): string {
   const entries = Object.entries(dateCounts)
   const MAX_DATES = 3
-  const parts = entries.slice(0, MAX_DATES).map(([date, count]) => `${formatDateRu(date)}: ${count}`)
+  const parts = entries
+    .slice(0, MAX_DATES)
+    .map(([date, count]) => `${formatDateRu(date)}: ${count}`)
   let result = parts.join(' | ')
   if (entries.length > MAX_DATES) {
     result += ' ...'
@@ -97,7 +99,12 @@ function UploadPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      console.log('[upload] File selected:', file.name, `${(file.size / 1024 / 1024).toFixed(1)}MB`, file.type)
+      console.log(
+        '[upload] File selected:',
+        file.name,
+        `${(file.size / 1024 / 1024).toFixed(1)}MB`,
+        file.type,
+      )
       uploadMutation.mutate(file)
     }
   }
@@ -127,9 +134,7 @@ function UploadPage() {
       </label>
 
       {uploadMutation.isError && (
-        <p className="mt-2 text-red-600 text-sm">
-          Upload failed: {uploadMutation.error.message}
-        </p>
+        <p className="mt-2 text-red-600 text-sm">Upload failed: {uploadMutation.error.message}</p>
       )}
 
       {/* Upload list */}

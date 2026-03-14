@@ -3,13 +3,19 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from '../api/client'
-import type { AllTimeTotals as AllTimeTotalsData, DashboardDay, DashboardResponse, Entry } from '../types'
+import type {
+  AllTimeTotals as AllTimeTotalsData,
+  DashboardDay,
+  DashboardResponse,
+  Entry,
+} from '../types'
 import { FeedingChart } from '../components/dashboard/FeedingChart'
 import { FeedingSpeedChart } from '../components/dashboard/FeedingSpeedChart'
 import { FeedingGapChart } from '../components/dashboard/FeedingGapChart'
 import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
+import { WeightChart } from '../components/dashboard/WeightChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
@@ -35,9 +41,7 @@ function DashboardPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard', { from_date, to_date }],
     queryFn: () =>
-      api.get<DashboardResponse>(
-        `/api/dashboard?from_date=${from_date}&to_date=${to_date}`,
-      ),
+      api.get<DashboardResponse>(`/api/dashboard?from_date=${from_date}&to_date=${to_date}`),
   })
 
   const { data: feedingData } = useQuery({
@@ -56,6 +60,14 @@ function DashboardPage() {
       ),
   })
 
+  const { data: weightData } = useQuery({
+    queryKey: ['entries', { type: 'weight', from_date, to_date }],
+    queryFn: () =>
+      api.get<{ entries: Entry[] }>(
+        `/api/entries?type=weight&from_date=${from_date}&to_date=${to_date}`,
+      ),
+  })
+
   const days = data?.days ?? []
   const yesterdayStr = getRelativeDateStr(-1)
   const dayBeforeStr = getRelativeDateStr(-2)
@@ -71,9 +83,7 @@ function DashboardPage() {
       <PeriodSelector period={period} onChange={setPeriod} />
 
       {isLoading && <p className="text-gray-400 text-center py-8">Загрузка...</p>}
-      {isError && (
-        <p className="text-red-500 text-center text-sm">{(error as Error).message}</p>
-      )}
+      {isError && <p className="text-red-500 text-center text-sm">{(error as Error).message}</p>}
 
       {data && (
         <>
@@ -88,18 +98,14 @@ function DashboardPage() {
           <AllTimeTotals totals={data.all_time_totals} />
 
           <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">
-              Кормление (мл/день)
-            </h2>
+            <h2 className="text-sm font-medium text-gray-500 mb-2">Кормление (мл/день)</h2>
             {days.length > 0 ? <FeedingChart days={days} /> : <EmptyState />}
           </section>
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
               <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  Кормления по часам
-                </h2>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Кормления по часам</h2>
                 <FeedingByHourChart entries={feedingData.entries} />
               </section>
 
@@ -136,9 +142,7 @@ function DashboardPage() {
               </section>
 
               <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  Интервал кормления (ч)
-                </h2>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Интервал кормления (ч)</h2>
                 <FeedingGapChart entries={feedingData.entries} />
               </section>
 
@@ -164,9 +168,7 @@ function DashboardPage() {
           )}
 
           <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">
-              Подгузники (шт/день)
-            </h2>
+            <h2 className="text-sm font-medium text-gray-500 mb-2">Подгузники (шт/день)</h2>
             {days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}
           </section>
 
@@ -192,19 +194,20 @@ function DashboardPage() {
               </section>
             </>
           )}
+
+          {weightData && weightData.entries.length >= 2 && (
+            <section>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес (г)</h2>
+              <WeightChart entries={weightData.entries} />
+            </section>
+          )}
         </>
       )}
     </div>
   )
 }
 
-function PeriodSelector({
-  period,
-  onChange,
-}: {
-  period: Period
-  onChange: (p: Period) => void
-}) {
+function PeriodSelector({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
   return (
     <div className="flex gap-2">
       {PERIODS.map((p) => (
@@ -309,7 +312,10 @@ function YesterdaySummary({
   const avgDiaperInterval = computeAvgInterval(diaperEntries)
   const velocity = yesterday ? yesterday.feeding_total_ml / 24 : 0
 
-  const mlPct = dayBefore && yesterday ? pctChange(yesterday.feeding_total_ml, dayBefore.feeding_total_ml) : null
+  const mlPct =
+    dayBefore && yesterday
+      ? pctChange(yesterday.feeding_total_ml, dayBefore.feeding_total_ml)
+      : null
   const diaperPct = dayBefore ? pctChange(diaperTotal, diaperTotalPrev) : null
 
   return (
@@ -325,7 +331,9 @@ function YesterdaySummary({
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg font-bold">{yesterday.feeding_count}</span>
                   <span className="text-sm text-gray-600">кормлений</span>
-                  <span className="text-sm text-gray-400">{Math.round(yesterday.feeding_total_ml)} мл</span>
+                  <span className="text-sm text-gray-400">
+                    {Math.round(yesterday.feeding_total_ml)} мл
+                  </span>
                 </div>
                 <PctBadge value={mlPct} />
               </div>
@@ -372,9 +380,7 @@ function YesterdaySummary({
           </>
         )}
 
-        {!yesterday && (
-          <p className="text-gray-400 text-sm text-center">Нет данных за вчера</p>
-        )}
+        {!yesterday && <p className="text-gray-400 text-sm text-center">Нет данных за вчера</p>}
 
         {/* Weight */}
         {latestWeight && (
@@ -444,9 +450,7 @@ function AllTimeTotals({ totals }: { totals: AllTimeTotalsData | null }) {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">
-        Всего за всё время
-      </p>
+      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Всего за всё время</p>
 
       <div className="space-y-2">
         <div>

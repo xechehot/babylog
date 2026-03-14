@@ -13,8 +13,7 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
   const [filter, setFilter] = useState<Filter>('all')
 
   const { chartData, options } = useMemo(() => {
-    const filtered =
-      filter === 'all' ? entries : entries.filter((e) => e.subtype === filter)
+    const filtered = filter === 'all' ? entries : entries.filter((e) => e.subtype === filter)
 
     const counts = new Array(24).fill(0) as number[]
     for (const e of filtered) {

@@ -17,6 +17,9 @@ export const COLORS = {
   amber600: '#d97706',
   pink600: '#db2777',
   green600: '#16a34a',
+  teal500: '#14b8a6',
+  teal300alpha: 'rgba(94, 234, 212, 0.5)',
+  teal600: '#0d9488',
 }
 
 export function formatDateTickRu(dateStr: string): string {
