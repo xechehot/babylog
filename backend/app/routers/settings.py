@@ -16,14 +16,12 @@ async def get_settings() -> SettingsResponse:
             SETTING_KEYS,
         )
         rows = await cursor.fetchall()
-    data: dict[str, str | int | None] = {}
-    for row in rows:
-        key, value = row["key"], row["value"]
-        if key == "birth_weight":
-            data[key] = int(value) if value else None
-        else:
-            data[key] = value
-    return SettingsResponse(**data)
+    raw: dict[str, str | None] = {row["key"]: row["value"] for row in rows}
+    return SettingsResponse(
+        baby_name=raw.get("baby_name"),
+        birth_date=raw.get("birth_date"),
+        birth_weight=int(bw) if (bw := raw.get("birth_weight")) else None,
+    )
 
 
 @router.put("", response_model=SettingsResponse)
