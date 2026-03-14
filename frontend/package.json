@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4",
@@ -22,10 +26,15 @@
   "devDependencies": {
     "@tanstack/router-devtools": "^1",
     "@tanstack/router-plugin": "^1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5",
+    "jsdom": "^28.1.0",
+    "prettier": "^3.8.1",
     "typescript": "~5.9",
-    "vite": "^7"
+    "vite": "^7",
+    "vitest": "^4.0.18"
   }
 }

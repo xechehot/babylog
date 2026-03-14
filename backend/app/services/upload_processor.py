@@ -14,9 +14,7 @@ async def process_upload(upload_id: int) -> None:
     logger.info("Processing upload %d", upload_id)
 
     async with get_db() as db:
-        await db.execute(
-            "UPDATE uploads SET status='processing' WHERE id=?", (upload_id,)
-        )
+        await db.execute("UPDATE uploads SET status='processing' WHERE id=?", (upload_id,))
         await db.commit()
 
     try:

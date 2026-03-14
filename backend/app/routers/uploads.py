@@ -46,6 +46,7 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
         await db.commit()
         upload_id = cursor.lastrowid
 
+    assert upload_id is not None
     logger.info("Upload saved: id=%d filename=%s (%.1f MB)", upload_id, file.filename, size_mb)
 
     # Queue background processing
@@ -54,6 +55,7 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
         row = await cursor.fetchone()
+        assert row is not None
 
     return UploadResponse(
         id=row["id"],
@@ -92,9 +94,7 @@ async def list_uploads(status: str | None = None) -> UploadListResponse:
                 upload_ids,
             )
             for dc_row in await dc_cursor.fetchall():
-                date_counts_map.setdefault(dc_row["upload_id"], {})[dc_row["date"]] = dc_row[
-                    "cnt"
-                ]
+                date_counts_map.setdefault(dc_row["upload_id"], {})[dc_row["date"]] = dc_row["cnt"]
 
     return UploadListResponse(
         uploads=[
@@ -158,9 +158,7 @@ async def get_upload(upload_id: int) -> UploadDetailResponse:
 @router.get("/{upload_id}/image")
 async def get_upload_image(upload_id: int) -> FileResponse:
     async with get_db() as db:
-        cursor = await db.execute(
-            "SELECT filepath, filename FROM uploads WHERE id=?", (upload_id,)
-        )
+        cursor = await db.execute("SELECT filepath, filename FROM uploads WHERE id=?", (upload_id,))
         row = await cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Upload not found")
@@ -173,9 +171,7 @@ async def get_upload_image(upload_id: int) -> FileResponse:
 
 
 @router.post("/{upload_id}/reprocess")
-async def reprocess_upload(
-    upload_id: int, background_tasks: BackgroundTasks
-) -> UploadResponse:
+async def reprocess_upload(upload_id: int, background_tasks: BackgroundTasks) -> UploadResponse:
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
         upload = await cursor.fetchone()
@@ -183,9 +179,7 @@ async def reprocess_upload(
             raise HTTPException(status_code=404, detail="Upload not found")
 
         if upload["status"] not in ("failed", "done"):
-            raise HTTPException(
-                status_code=400, detail="Can only reprocess failed or done uploads"
-            )
+            raise HTTPException(status_code=400, detail="Can only reprocess failed or done uploads")
 
         # Delete old entries and reset status
         await db.execute("DELETE FROM entries WHERE upload_id=?", (upload_id,))
@@ -200,6 +194,7 @@ async def reprocess_upload(
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
         row = await cursor.fetchone()
+        assert row is not None
 
     return UploadResponse(
         id=row["id"],
