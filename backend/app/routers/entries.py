@@ -92,7 +92,7 @@ async def update_entry(entry_id: int, entry: EntryUpdate) -> EntryResponse:
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
 
-        updates = {}
+        updates: dict[str, str | float | int] = {}
         if entry.entry_type is not None:
             updates["entry_type"] = entry.entry_type
         if entry.subtype is not None:

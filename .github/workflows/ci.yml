@@ -58,6 +58,9 @@ jobs:
       - name: Format check (prettier)
         run: npx prettier --check 'src/**/*.{ts,tsx}'
 
+      - name: Generate route tree
+        run: npx @tanstack/router-cli generate
+
       - name: Type check (tsc)
         run: npx tsc -b
 

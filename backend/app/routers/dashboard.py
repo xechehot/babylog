@@ -50,7 +50,7 @@ async def get_dashboard(
             LIMIT 2
             """
         )
-        weight_rows = await cursor.fetchall()
+        weight_rows = list(await cursor.fetchall())
 
         # All-time totals
         cursor = await db.execute(

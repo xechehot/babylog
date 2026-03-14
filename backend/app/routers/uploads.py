@@ -46,6 +46,7 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
         await db.commit()
         upload_id = cursor.lastrowid
 
+    assert upload_id is not None
     logger.info("Upload saved: id=%d filename=%s (%.1f MB)", upload_id, file.filename, size_mb)
 
     # Queue background processing
@@ -54,6 +55,7 @@ async def create_upload(file: UploadFile, background_tasks: BackgroundTasks) -> 
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
         row = await cursor.fetchone()
+        assert row is not None
 
     return UploadResponse(
         id=row["id"],
@@ -192,6 +194,7 @@ async def reprocess_upload(upload_id: int, background_tasks: BackgroundTasks) ->
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
         row = await cursor.fetchone()
+        assert row is not None
 
     return UploadResponse(
         id=row["id"],
