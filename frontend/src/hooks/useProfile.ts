@@ -64,8 +64,18 @@ export function formatAge(birthDate: string): string | null {
   }
 
   // Show months + weeks for older babies
-  const months = Math.floor(days / 30)
-  const remainingWeeks = Math.floor((days % 30) / 7)
+  const birth = new Date(birthDate)
+  const now = new Date()
+  let months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
+  if (now.getDate() < birth.getDate()) {
+    months--
+  }
+  const monthStart = new Date(birth)
+  monthStart.setMonth(monthStart.getMonth() + months)
+  const remainingDaysAfterMonths = Math.floor(
+    (now.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24),
+  )
+  const remainingWeeks = Math.floor(remainingDaysAfterMonths / 7)
   let result = `${months} ${pluralize(months, 'месяц', 'месяца', 'месяцев')}`
   if (remainingWeeks > 0) {
     result += ` ${remainingWeeks} ${pluralize(remainingWeeks, 'неделя', 'недели', 'недель')}`

@@ -8,7 +8,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const isProfilePage = pathname === '/profile'
+  const isProfilePage = pathname.endsWith('/profile')
 
   return (
     <div className="min-h-screen bg-gray-50">
