@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow Rules
+
+- When asked to implement a feature, start coding immediately if a plan/spec is provided. Do not spend time exploring the codebase or writing a plan unless explicitly asked.
+- Always commit and push after completing implementation unless told otherwise. The typical workflow is: implement → build/test → commit → push.
+
 ## What is babylog
 
 A full-stack app that turns photos of handwritten baby logs (in Russian) into structured data. Parents photograph paper notes tracking feedings, diaper changes, and weight — an LLM (Claude/OpenAI vision API) extracts entries, which are then reviewed and visualized on a dashboard. Single-user, no auth (Tailscale handles network security), SQLite storage.
@@ -22,6 +27,10 @@ Tests: `cd backend && uv run pytest`
 Single test: `cd backend && uv run pytest tests/test_dashboard_diapers.py::test_name -v`
 
 Tests use `httpx.AsyncClient` with `ASGITransport`, auto-patched to a temp SQLite DB per test (see `conftest.py`).
+
+### Build & Test
+
+This is a TypeScript-primary project with a Python backend. Always run `npm run build` (or equivalent) after frontend changes and `uv run pytest` after backend changes before committing.
 
 ### Frontend (React 19 + Vite 7 + TypeScript)
 ```bash
@@ -62,6 +71,10 @@ Ruff config: py312, line-length 100, select E/F/I/N/W/UP.
 - Mobile-first, Tailwind CSS v4
 - All charts are hand-crafted SVG (no chart library) in `src/components/dashboard/`
 - Dashboard uses feeding session merging (20-min window) for velocity/gap calculations — see `mergeCloseFeedings()` in `utils.ts`
+
+### Data & Business Logic
+
+When fixing counting/aggregation logic, clarify the exact semantics with the user before implementing. E.g., should 'pee+poo' count toward both pee AND poo totals?
 
 ### Key Conventions
 - `pee+poo` diaper counting: backend returns raw `diaper_pee_poo_count`; frontend adds it to both wet and dirty totals
