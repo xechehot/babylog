@@ -19,6 +19,7 @@ import { WeightChart } from '../components/dashboard/WeightChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
+import { useProfile } from '../hooks/useProfile'
 import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
@@ -37,6 +38,8 @@ const PERIODS: Period[] = [7, 14, 30]
 function DashboardPage() {
   const [period, setPeriod] = useState<Period>(7)
   const { from_date, to_date } = getDateRange(period)
+
+  const { profile } = useProfile()
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard', { from_date, to_date }],
@@ -195,10 +198,15 @@ function DashboardPage() {
             </>
           )}
 
-          {weightData && weightData.entries.length >= 2 && (
+          {weightData && (weightData.entries.length >= 2 || profile.birth_weight) && (
             <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес (г)</h2>
-              <WeightChart entries={weightData.entries} />
+              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес и нормы ВОЗ</h2>
+              <WeightChart
+                entries={weightData.entries}
+                birthDate={profile.birth_date}
+                birthWeight={profile.birth_weight}
+                sex={profile.sex}
+              />
             </section>
           )}
         </>
