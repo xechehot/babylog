@@ -1,70 +1,186 @@
-// WHO Weight Velocity Standards: daily weight gain as % of body weight (0–24 months)
-// Computed from WHO weight increment tables divided by WHO median weight at interval midpoint.
+// WHO Weight Velocity Standards (g/day)
+// 0–60 days: stratified by birth weight category (from WHO birth-to-60-day tables)
+// 2–24 months: "All" category (from WHO 1-month / 2-month increment tables, converted to g/day)
 // Source: https://www.who.int/tools/child-growth-standards/standards/weight-velocity
 
-export interface VelocityBand {
-  fromMonth: number
-  toMonth: number
-  p3: number
-  p15: number
-  p50: number
-  p85: number
-  p97: number
+export interface VelocityInterval {
+  fromDay: number
+  toDay: number
+  p5: number  // g/day
+  p25: number // g/day
+  p50: number // g/day
 }
 
-// Boys: daily weight gain as % of body weight
-export const VELOCITY_BOYS: VelocityBand[] = [
-  { fromMonth: 0, toMonth: 1, p3: 0.34, p15: 0.62, p50: 0.94, p85: 1.22, p97: 1.44 },
-  { fromMonth: 1, toMonth: 2, p3: 0.42, p15: 0.58, p50: 0.78, p85: 0.99, p97: 1.17 },
-  { fromMonth: 2, toMonth: 3, p3: 0.22, p15: 0.32, p50: 0.45, p85: 0.59, p97: 0.71 },
-  { fromMonth: 3, toMonth: 4, p3: 0.12, p15: 0.20, p50: 0.30, p85: 0.41, p97: 0.51 },
-  { fromMonth: 4, toMonth: 5, p3: 0.07, p15: 0.14, p50: 0.24, p85: 0.34, p97: 0.42 },
-  { fromMonth: 5, toMonth: 6, p3: 0.03, p15: 0.09, p50: 0.18, p85: 0.27, p97: 0.35 },
-  { fromMonth: 6, toMonth: 7, p3: 0.0, p15: 0.06, p50: 0.14, p85: 0.23, p97: 0.31 },
-  { fromMonth: 7, toMonth: 8, p3: -0.02, p15: 0.04, p50: 0.12, p85: 0.21, p97: 0.28 },
-  { fromMonth: 8, toMonth: 9, p3: -0.03, p15: 0.03, p50: 0.11, p85: 0.19, p97: 0.26 },
-  { fromMonth: 9, toMonth: 10, p3: -0.04, p15: 0.02, p50: 0.09, p85: 0.18, p97: 0.25 },
-  { fromMonth: 10, toMonth: 11, p3: -0.05, p15: 0.01, p50: 0.09, p85: 0.17, p97: 0.24 },
-  { fromMonth: 11, toMonth: 12, p3: -0.05, p15: 0.01, p50: 0.08, p85: 0.17, p97: 0.24 },
-  { fromMonth: 12, toMonth: 14, p3: -0.02, p15: 0.02, p50: 0.07, p85: 0.13, p97: 0.18 },
-  { fromMonth: 14, toMonth: 16, p3: -0.02, p15: 0.01, p50: 0.06, p85: 0.12, p97: 0.16 },
-  { fromMonth: 16, toMonth: 18, p3: -0.02, p15: 0.01, p50: 0.06, p85: 0.11, p97: 0.16 },
-  { fromMonth: 18, toMonth: 20, p3: -0.03, p15: 0.01, p50: 0.06, p85: 0.11, p97: 0.15 },
-  { fromMonth: 20, toMonth: 22, p3: -0.03, p15: 0.01, p50: 0.05, p85: 0.10, p97: 0.14 },
-  { fromMonth: 22, toMonth: 24, p3: -0.03, p15: 0.01, p50: 0.05, p85: 0.10, p97: 0.14 },
+// Birth weight categories for 0-60 day norms
+type BirthWeightKey = '2500-3000' | '3000-3500' | '3500-4000' | '4000+' | 'all'
+
+function birthWeightKey(birthWeightGrams: number | null): BirthWeightKey {
+  if (birthWeightGrams == null) return 'all'
+  if (birthWeightGrams < 2500) return 'all' // insufficient WHO data for <2500g
+  if (birthWeightGrams < 3000) return '2500-3000'
+  if (birthWeightGrams < 3500) return '3000-3500'
+  if (birthWeightGrams < 4000) return '3500-4000'
+  return '4000+'
+}
+
+// ── Boys: 0–60 days, g/day, by birth weight ──
+
+const BOYS_EARLY: Record<BirthWeightKey, VelocityInterval[]> = {
+  '2500-3000': [
+    { fromDay: 0, toDay: 7, p5: -29, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: -14, p25: 21, p50: 36 },
+    { fromDay: 14, toDay: 28, p5: 32, p25: 39, p50: 50 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 36, p50: 42 },
+    { fromDay: 42, toDay: 60, p5: 24, p25: 29, p50: 35 },
+  ],
+  '3000-3500': [
+    { fromDay: 0, toDay: 7, p5: -36, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: -7, p25: 19, p50: 33 },
+    { fromDay: 14, toDay: 28, p5: 25, p25: 39, p50: 46 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 31, p50: 40 },
+    { fromDay: 42, toDay: 60, p5: 17, p25: 28, p50: 34 },
+  ],
+  '3500-4000': [
+    { fromDay: 0, toDay: 7, p5: -43, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: -7, p25: 14, p50: 31 },
+    { fromDay: 14, toDay: 28, p5: 23, p25: 36, p50: 50 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 33, p50: 41 },
+    { fromDay: 42, toDay: 60, p5: 19, p25: 26, p50: 34 },
+  ],
+  '4000+': [
+    { fromDay: 0, toDay: 7, p5: -36, p25: -7, p50: 7 },
+    { fromDay: 7, toDay: 14, p5: -14, p25: 25, p50: 36 },
+    { fromDay: 14, toDay: 28, p5: 29, p25: 37, p50: 50 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 31, p50: 40 },
+    { fromDay: 42, toDay: 60, p5: 14, p25: 23, p50: 34 },
+  ],
+  all: [
+    { fromDay: 0, toDay: 7, p5: -36, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: -7, p25: 19, p50: 36 },
+    { fromDay: 14, toDay: 28, p5: 25, p25: 38, p50: 47 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 32, p50: 40 },
+    { fromDay: 42, toDay: 60, p5: 18, p25: 28, p50: 34 },
+  ],
+}
+
+// ── Girls: 0–60 days, g/day, by birth weight ──
+
+const GIRLS_EARLY: Record<BirthWeightKey, VelocityInterval[]> = {
+  '2500-3000': [
+    { fromDay: 0, toDay: 7, p5: -21, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: -12, p25: 14, p50: 29 },
+    { fromDay: 14, toDay: 28, p5: 21, p25: 33, p50: 43 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 27, p50: 36 },
+    { fromDay: 42, toDay: 60, p5: 17, p25: 23, p50: 31 },
+  ],
+  '3000-3500': [
+    { fromDay: 0, toDay: 7, p5: -29, p25: 0, p50: 14 },
+    { fromDay: 7, toDay: 14, p5: -7, p25: 14, p50: 29 },
+    { fromDay: 14, toDay: 28, p5: 21, p25: 32, p50: 39 },
+    { fromDay: 28, toDay: 42, p5: 18, p25: 28, p50: 35 },
+    { fromDay: 42, toDay: 60, p5: 15, p25: 21, p50: 27 },
+  ],
+  '3500-4000': [
+    { fromDay: 0, toDay: 7, p5: -36, p25: 0, p50: 14 },
+    { fromDay: 7, toDay: 14, p5: -14, p25: 14, p50: 29 },
+    { fromDay: 14, toDay: 28, p5: 18, p25: 32, p50: 42 },
+    { fromDay: 28, toDay: 42, p5: 15, p25: 25, p50: 32 },
+    { fromDay: 42, toDay: 60, p5: 13, p25: 23, p50: 32 },
+  ],
+  '4000+': [
+    { fromDay: 0, toDay: 7, p5: -29, p25: 0, p50: 21 },
+    { fromDay: 7, toDay: 14, p5: 0, p25: 14, p50: 29 },
+    { fromDay: 14, toDay: 28, p5: 17, p25: 31, p50: 44 },
+    { fromDay: 28, toDay: 42, p5: 21, p25: 26, p50: 38 },
+    { fromDay: 42, toDay: 60, p5: 9, p25: 20, p50: 29 },
+  ],
+  all: [
+    { fromDay: 0, toDay: 7, p5: -29, p25: 0, p50: 14 },
+    { fromDay: 7, toDay: 14, p5: -7, p25: 14, p50: 29 },
+    { fromDay: 14, toDay: 28, p5: 21, p25: 32, p50: 39 },
+    { fromDay: 28, toDay: 42, p5: 18, p25: 27, p50: 35 },
+    { fromDay: 42, toDay: 60, p5: 15, p25: 22, p50: 29 },
+  ],
+}
+
+// ── Boys: 2–24 months, g/day (from WHO monthly increment tables, "All" category) ──
+// g/month ÷ 30.44 days
+
+const BOYS_MONTHLY: VelocityInterval[] = [
+  { fromDay: 60, toDay: 91, p5: 10, p25: 22, p50: 27 },   // 2-3mo
+  { fromDay: 91, toDay: 122, p5: 5, p25: 16, p50: 20 },   // 3-4mo
+  { fromDay: 122, toDay: 152, p5: 2, p25: 13, p50: 17 },   // 4-5mo
+  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 14 },   // 5-6mo
+  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 12 },   // 6-7mo
+  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 },   // 7-8mo
+  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 },    // 8-9mo
+  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 9 },    // 9-10mo
+  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 },    // 10-11mo
+  { fromDay: 335, toDay: 365, p5: -7, p25: 3, p50: 8 },    // 11-12mo
+  { fromDay: 365, toDay: 426, p5: -5, p25: 4, p50: 7 },    // 12-14mo
+  { fromDay: 426, toDay: 487, p5: -5, p25: 3, p50: 7 },    // 14-16mo
+  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 },    // 16-18mo
+  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 6 },    // 18-20mo
+  { fromDay: 609, toDay: 670, p5: -6, p25: 3, p50: 6 },    // 20-22mo
+  { fromDay: 670, toDay: 730, p5: -6, p25: 3, p50: 6 },    // 22-24mo
 ]
 
-// Girls: daily weight gain as % of body weight
-export const VELOCITY_GIRLS: VelocityBand[] = [
-  { fromMonth: 0, toMonth: 1, p3: 0.37, p15: 0.58, p50: 0.85, p85: 1.13, p97: 1.37 },
-  { fromMonth: 1, toMonth: 2, p3: 0.37, p15: 0.52, p50: 0.71, p85: 0.92, p97: 1.09 },
-  { fromMonth: 2, toMonth: 3, p3: 0.19, p15: 0.30, p50: 0.43, p85: 0.57, p97: 0.69 },
-  { fromMonth: 3, toMonth: 4, p3: 0.12, p15: 0.20, p50: 0.32, p85: 0.43, p97: 0.53 },
-  { fromMonth: 4, toMonth: 5, p3: 0.06, p15: 0.14, p50: 0.24, p85: 0.35, p97: 0.44 },
-  { fromMonth: 5, toMonth: 6, p3: 0.02, p15: 0.09, p50: 0.19, p85: 0.28, p97: 0.37 },
-  { fromMonth: 6, toMonth: 7, p3: 0.0, p15: 0.06, p50: 0.15, p85: 0.24, p97: 0.32 },
-  { fromMonth: 7, toMonth: 8, p3: -0.02, p15: 0.05, p50: 0.13, p85: 0.22, p97: 0.30 },
-  { fromMonth: 8, toMonth: 9, p3: -0.03, p15: 0.03, p50: 0.11, p85: 0.20, p97: 0.28 },
-  { fromMonth: 9, toMonth: 10, p3: -0.04, p15: 0.02, p50: 0.10, p85: 0.18, p97: 0.26 },
-  { fromMonth: 10, toMonth: 11, p3: -0.05, p15: 0.01, p50: 0.09, p85: 0.18, p97: 0.25 },
-  { fromMonth: 11, toMonth: 12, p3: -0.05, p15: 0.01, p50: 0.09, p85: 0.17, p97: 0.25 },
-  { fromMonth: 12, toMonth: 14, p3: -0.01, p15: 0.03, p50: 0.08, p85: 0.13, p97: 0.18 },
-  { fromMonth: 14, toMonth: 16, p3: -0.02, p15: 0.02, p50: 0.07, p85: 0.13, p97: 0.17 },
-  { fromMonth: 16, toMonth: 18, p3: -0.02, p15: 0.02, p50: 0.07, p85: 0.12, p97: 0.17 },
-  { fromMonth: 18, toMonth: 20, p3: -0.02, p15: 0.01, p50: 0.06, p85: 0.12, p97: 0.17 },
-  { fromMonth: 20, toMonth: 22, p3: -0.03, p15: 0.01, p50: 0.06, p85: 0.11, p97: 0.16 },
-  { fromMonth: 22, toMonth: 24, p3: -0.03, p15: 0.01, p50: 0.05, p85: 0.11, p97: 0.15 },
+// ── Girls: 2–24 months, g/day ──
+
+const GIRLS_MONTHLY: VelocityInterval[] = [
+  { fromDay: 60, toDay: 91, p5: 8, p25: 19, p50: 24 },    // 2-3mo
+  { fromDay: 91, toDay: 122, p5: 4, p25: 15, p50: 19 },   // 3-4mo
+  { fromDay: 122, toDay: 152, p5: 1, p25: 12, p50: 16 },   // 4-5mo
+  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 13 },   // 5-6mo
+  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 11 },   // 6-7mo
+  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 },   // 7-8mo
+  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 },    // 8-9mo
+  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 8 },    // 9-10mo
+  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 },    // 10-11mo
+  { fromDay: 335, toDay: 365, p5: -6, p25: 3, p50: 8 },    // 11-12mo
+  { fromDay: 365, toDay: 426, p5: -4, p25: 4, p50: 7 },    // 12-14mo
+  { fromDay: 426, toDay: 487, p5: -4, p25: 4, p50: 7 },    // 14-16mo
+  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 },    // 16-18mo
+  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 7 },    // 18-20mo
+  { fromDay: 609, toDay: 670, p5: -5, p25: 3, p50: 6 },    // 20-22mo
+  { fromDay: 670, toDay: 730, p5: -6, p25: 2, p50: 6 },    // 22-24mo
 ]
 
-/** Get WHO velocity band for a given age in months */
-export function getVelocityBand(
-  bands: VelocityBand[],
-  ageMonths: number,
-): VelocityBand | null {
-  for (const band of bands) {
-    if (ageMonths >= band.fromMonth && ageMonths < band.toMonth) return band
+/** Get velocity norms (g/day) for a given age, sex, and birth weight */
+export function getVelocityNorms(
+  sex: 'boy' | 'girl',
+  birthWeightGrams: number | null,
+  ageDays: number,
+): VelocityInterval | null {
+  if (ageDays < 0) return null
+
+  if (ageDays < 60) {
+    // Use birth-weight-stratified data for first 60 days
+    const key = birthWeightKey(birthWeightGrams)
+    const earlyData = sex === 'boy' ? BOYS_EARLY[key] : GIRLS_EARLY[key]
+    for (const interval of earlyData) {
+      if (ageDays >= interval.fromDay && ageDays < interval.toDay) return interval
+    }
+    return null
   }
-  // Edge case: exactly 24 months → use last band
-  if (ageMonths >= 24) return bands[bands.length - 1]
+
+  // After 60 days: use monthly data (not birth-weight-stratified)
+  const monthlyData = sex === 'boy' ? BOYS_MONTHLY : GIRLS_MONTHLY
+  for (const interval of monthlyData) {
+    if (ageDays >= interval.fromDay && ageDays < interval.toDay) return interval
+  }
+
+  // Beyond 24 months
   return null
+}
+
+/** Get all velocity intervals for building WHO norm curves on chart */
+export function getAllVelocityIntervals(
+  sex: 'boy' | 'girl',
+  birthWeightGrams: number | null,
+): VelocityInterval[] {
+  const key = birthWeightKey(birthWeightGrams)
+  const early = sex === 'boy' ? BOYS_EARLY[key] : GIRLS_EARLY[key]
+  const monthly = sex === 'boy' ? BOYS_MONTHLY : GIRLS_MONTHLY
+  return [...early, ...monthly]
 }

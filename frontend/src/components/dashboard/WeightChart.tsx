@@ -6,34 +6,32 @@ import type { Entry } from '../../types'
 import type { BabySex } from '../../hooks/useProfile'
 import { baseLineOptions } from './chartConfig'
 import { WHO_BOYS, WHO_GIRLS, PERCENTILE_KEYS, PERCENTILE_LABELS } from './whoWeightData'
-import {
-  VELOCITY_BOYS,
-  VELOCITY_GIRLS,
-  getVelocityBand,
-  type VelocityBand,
-} from './whoVelocityData'
+import { getAllVelocityIntervals, type VelocityInterval } from './whoVelocityData'
 
 interface WeightPoint {
   date: string
   occurred_at: string
   weight: number // grams
-  ageMonths: number | null // age in fractional months from birth
+  ageMonths: number | null
+  ageDays: number | null
 }
 
 function buildWeightPoints(entries: Entry[], birthDate: string | null): WeightPoint[] {
   const birthTime = birthDate ? new Date(birthDate + 'T00:00:00').getTime() : null
+  const msPerDay = 1000 * 60 * 60 * 24
   return entries
     .filter((e) => e.value != null && e.value > 0)
     .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
     .map((e) => {
       const entryTime = new Date(e.occurred_at).getTime()
-      const ageMonths =
-        birthTime != null ? (entryTime - birthTime) / (1000 * 60 * 60 * 24 * 30.4375) : null
+      const ageDays = birthTime != null ? (entryTime - birthTime) / msPerDay : null
+      const ageMonths = ageDays != null ? ageDays / 30.4375 : null
       return {
         date: e.date,
         occurred_at: e.occurred_at,
         weight: e.value!,
         ageMonths,
+        ageDays,
       }
     })
 }
@@ -49,37 +47,15 @@ function interpolateWHO(data: number[], ageMonths: number): number | null {
 }
 
 const MONTH_NAMES = [
-  'Рожд.',
-  '1 мес',
-  '2 мес',
-  '3 мес',
-  '4 мес',
-  '5 мес',
-  '6 мес',
-  '7 мес',
-  '8 мес',
-  '9 мес',
-  '10 мес',
-  '11 мес',
-  '12 мес',
-  '13 мес',
-  '14 мес',
-  '15 мес',
-  '16 мес',
-  '17 мес',
-  '18 мес',
-  '19 мес',
-  '20 мес',
-  '21 мес',
-  '22 мес',
-  '23 мес',
-  '24 мес',
+  'Рожд.', '1 мес', '2 мес', '3 мес', '4 мес', '5 мес', '6 мес',
+  '7 мес', '8 мес', '9 мес', '10 мес', '11 мес', '12 мес',
+  '13 мес', '14 мес', '15 мес', '16 мес', '17 мес', '18 мес',
+  '19 мес', '20 мес', '21 мес', '22 мес', '23 мес', '24 мес',
 ]
 
-// WHO band colors
 const BAND_COLORS = {
-  outer: 'rgba(251, 191, 36, 0.15)', // P3-P15 and P85-P97
-  inner: 'rgba(74, 222, 128, 0.15)', // P15-P85
+  outer: 'rgba(251, 191, 36, 0.15)',
+  inner: 'rgba(74, 222, 128, 0.15)',
 }
 
 const WHO_LINE_COLORS = {
@@ -119,7 +95,6 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   }
 
   const whoData = sex === 'boy' ? WHO_BOYS : WHO_GIRLS
-  const velocityBands = sex === 'boy' ? VELOCITY_BOYS : VELOCITY_GIRLS
 
   const allPoints = useMemo(() => {
     if (!birthWeight || !birthDate) return points
@@ -128,6 +103,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
       occurred_at: birthDate + 'T00:00:00',
       weight: birthWeight,
       ageMonths: 0,
+      ageDays: 0,
     }
     if (points.length > 0 && points[0].ageMonths != null && points[0].ageMonths < 0.1) {
       return points
@@ -143,29 +119,23 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     return <SimpleWeightChart points={allPoints} />
   }
 
-  // Build a unified x-axis (in months) with WHO month marks + baby data points
+  // Build unified x-axis
   const minAge = Math.max(0, Math.floor(allPoints[0].ageMonths!))
   const maxAge = Math.min(24, Math.ceil(allPoints[allPoints.length - 1].ageMonths!))
   const allXValues = new Set<number>()
-  for (let m = minAge; m <= maxAge; m++) {
-    allXValues.add(m)
-  }
+  for (let m = minAge; m <= maxAge; m++) allXValues.add(m)
   for (const p of allPoints) {
-    if (p.ageMonths != null) {
-      allXValues.add(Math.round(p.ageMonths * 100) / 100)
-    }
+    if (p.ageMonths != null) allXValues.add(Math.round(p.ageMonths * 100) / 100)
   }
   const sortedX = Array.from(allXValues).sort((a, b) => a - b)
 
   const labels = sortedX.map((x) => {
     const rounded = Math.round(x)
-    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) {
-      return MONTH_NAMES[rounded]
-    }
+    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) return MONTH_NAMES[rounded]
     return ''
   })
 
-  // WHO datasets with colored bands
+  // WHO weight-for-age curves with colored bands
   const whoLineColors = Object.values(WHO_LINE_COLORS)
   const whoInterpolated = PERCENTILE_KEYS.map((key, i) => ({
     label: `WHO ${PERCENTILE_LABELS[i]}`,
@@ -181,13 +151,11 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     order: 1,
   }))
 
-  // Fill bands between adjacent WHO curves
-  // Dataset indices: 0=baby, 1=P3, 2=P15, 3=P50, 4=P85, 5=P97
   if (whoInterpolated.length >= 5) {
-    whoInterpolated[1].fill = { target: 1, above: BAND_COLORS.outer, below: BAND_COLORS.outer } // P15→P3
-    whoInterpolated[2].fill = { target: 2, above: BAND_COLORS.inner, below: BAND_COLORS.inner } // P50→P15
-    whoInterpolated[3].fill = { target: 3, above: BAND_COLORS.inner, below: BAND_COLORS.inner } // P85→P50
-    whoInterpolated[4].fill = { target: 4, above: BAND_COLORS.outer, below: BAND_COLORS.outer } // P97→P85
+    whoInterpolated[1].fill = { target: 1, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
+    whoInterpolated[2].fill = { target: 2, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
+    whoInterpolated[3].fill = { target: 3, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
+    whoInterpolated[4].fill = { target: 4, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
   }
 
   const babyData = sortedX.map((x) => {
@@ -229,10 +197,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
           },
         },
       },
-      y: {
-        ...baseLineOptions().scales!.y,
-        beginAtZero: false,
-      },
+      y: { ...baseLineOptions().scales!.y, beginAtZero: false },
     },
     plugins: {
       ...baseLineOptions().plugins,
@@ -253,37 +218,38 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     },
   }
 
-  // Calculate velocity points (daily gain %) between consecutive measurements
+  // Calculate velocity points (g/day) between consecutive measurements
   const velocityPoints: {
-    ageMonths: number
-    dailyGainPct: number
+    ageDays: number
+    gPerDay: number
     date: string
     gainGrams: number
     days: number
   }[] = []
+  const msPerDay = 1000 * 60 * 60 * 24
   for (let i = 1; i < allPoints.length; i++) {
     const prev = allPoints[i - 1]
     const curr = allPoints[i]
-    if (prev.ageMonths == null || curr.ageMonths == null) continue
-    const msPerDay = 1000 * 60 * 60 * 24
+    if (prev.ageDays == null || curr.ageDays == null) continue
     const days =
       (new Date(curr.occurred_at).getTime() - new Date(prev.occurred_at).getTime()) / msPerDay
-    if (days < 0.5) continue // skip same-day measurements
+    if (days < 0.5) continue
     const gainGrams = curr.weight - prev.weight
-    const dailyGainPct = ((gainGrams / prev.weight) / days) * 100
-    const midAge = (prev.ageMonths + curr.ageMonths) / 2
+    const gPerDay = gainGrams / days
+    const midAgeDays = (prev.ageDays + curr.ageDays) / 2
     velocityPoints.push({
-      ageMonths: midAge,
-      dailyGainPct,
+      ageDays: midAgeDays,
+      gPerDay: Math.round(gPerDay * 10) / 10,
       date: curr.date,
-      gainGrams,
+      gainGrams: Math.round(gainGrams),
       days: Math.round(days),
     })
   }
 
+  const velocityIntervals = getAllVelocityIntervals(sex, birthWeight)
+
   return (
     <div className="space-y-4">
-      {/* Absolute weight chart with WHO bands */}
       <div className="bg-white rounded-lg border border-gray-200 p-3">
         <Line data={chartData} options={options} />
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
@@ -303,81 +269,71 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
         </div>
       </div>
 
-      {/* Weight velocity chart */}
       {velocityPoints.length >= 1 && (
-        <VelocityChart points={velocityPoints} bands={velocityBands} />
+        <VelocityChart points={velocityPoints} intervals={velocityIntervals} />
       )}
     </div>
   )
 }
 
-/** Chart showing daily weight gain rate (%) with WHO velocity norms */
+/** Chart showing daily weight gain (g/day) with WHO velocity norms */
 function VelocityChart({
   points,
-  bands,
+  intervals,
 }: {
-  points: { ageMonths: number; dailyGainPct: number; date: string; gainGrams: number; days: number }[]
-  bands: VelocityBand[]
+  points: { ageDays: number; gPerDay: number; date: string; gainGrams: number; days: number }[]
+  intervals: VelocityInterval[]
 }) {
-  // Build x-axis: monthly marks + baby data points
-  const minAge = Math.max(0, Math.floor(Math.min(...points.map((p) => p.ageMonths))))
-  const maxAge = Math.min(24, Math.ceil(Math.max(...points.map((p) => p.ageMonths))))
+  // Build x-axis in days, with interval boundaries + baby data points
   const allX = new Set<number>()
-  for (let m = minAge; m <= maxAge; m++) allX.add(m)
-  for (const p of points) allX.add(Math.round(p.ageMonths * 100) / 100)
+  for (const interval of intervals) {
+    // Only add interval boundaries that are within the range of baby data
+    const minDay = Math.max(0, points[0].ageDays - 5)
+    const maxDay = points[points.length - 1].ageDays + 5
+    if (interval.fromDay >= minDay && interval.fromDay <= maxDay) allX.add(interval.fromDay)
+    if (interval.toDay >= minDay && interval.toDay <= maxDay) allX.add(interval.toDay)
+  }
+  for (const p of points) allX.add(Math.round(p.ageDays))
   const sortedX = Array.from(allX).sort((a, b) => a - b)
 
-  const labels = sortedX.map((x) => {
-    const rounded = Math.round(x)
-    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) {
-      return MONTH_NAMES[rounded]
+  // Labels: show weeks for first 60 days, months after
+  const labels = sortedX.map((d) => {
+    if (d === 0) return 'Рожд.'
+    if (d <= 60) {
+      const weeks = Math.round(d / 7)
+      if (Math.abs(d - weeks * 7) < 2) return `${weeks} нед`
+      return ''
     }
+    const months = Math.round(d / 30.4375)
+    if (Math.abs(d - months * 30.4375) < 5) return `${months} мес`
     return ''
   })
 
-  // Baby velocity data at correct x positions
+  // Baby velocity at correct x positions
   const babyVelocity = sortedX.map((x) => {
-    const match = points.find((p) => Math.abs(p.ageMonths - x) < 0.05)
-    return match ? match.dailyGainPct : null
+    const match = points.find((p) => Math.abs(p.ageDays - x) < 2)
+    return match ? match.gPerDay : null
   })
 
-  // WHO velocity band curves
-  const whoKeys = ['p3', 'p15', 'p50', 'p85', 'p97'] as const
-  const whoLabels = ['WHO 3-й', 'WHO 15-й', 'WHO 50-й', 'WHO 85-й', 'WHO 97-й']
-  const whoLineColors = Object.values(WHO_LINE_COLORS)
-
-  const whoCurves = whoKeys.map((key, i) => ({
-    label: whoLabels[i],
-    data: sortedX.map((x) => {
-      const band = getVelocityBand(bands, x)
-      return band ? band[key] : null
-    }),
-    borderColor: whoLineColors[i],
-    borderWidth: key === 'p50' ? 2 : 1,
-    borderDash: key === 'p50' ? [] : ([4, 3] as number[]),
-    pointRadius: 0,
-    pointHoverRadius: 0,
-    tension: 0.4,
-    fill: false as boolean | { target: number; above: string; below: string },
-    datalabels: { display: false },
-    order: 1,
-    stepped: 'middle' as const,
-  }))
-
-  // Fill bands between WHO curves
-  // Dataset indices: 0=baby, 1=P3, 2=P15, 3=P50, 4=P85, 5=P97
-  if (whoCurves.length >= 5) {
-    whoCurves[1].fill = { target: 1, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
-    whoCurves[2].fill = { target: 2, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
-    whoCurves[3].fill = { target: 3, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
-    whoCurves[4].fill = { target: 4, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
-  }
+  // WHO velocity norm curves (stepped, using interval midpoints)
+  const whoP5 = sortedX.map((x) => {
+    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
+    return interval ? interval.p5 : null
+  })
+  const whoP25 = sortedX.map((x) => {
+    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
+    return interval ? interval.p25 : null
+  })
+  const whoP50 = sortedX.map((x) => {
+    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
+    return interval ? interval.p50 : null
+  })
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: 'Прирост (%/день)',
+        label: 'Набор (г/день)',
         data: babyVelocity,
         borderColor: '#0d9488',
         backgroundColor: 'rgba(94, 234, 212, 0.5)',
@@ -390,7 +346,50 @@ function VelocityChart({
         datalabels: { display: false },
         order: 0,
       },
-      ...whoCurves,
+      // P5 line (danger threshold)
+      {
+        label: 'WHO 5-й',
+        data: whoP5,
+        borderColor: 'rgba(239, 68, 68, 0.5)',
+        borderWidth: 1,
+        borderDash: [4, 3],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0,
+        fill: false,
+        stepped: 'middle' as const,
+        datalabels: { display: false },
+        order: 2,
+      },
+      // P25 line (watch threshold) — fill band to P5
+      {
+        label: 'WHO 25-й',
+        data: whoP25,
+        borderColor: 'rgba(251, 191, 36, 0.6)',
+        borderWidth: 1,
+        borderDash: [4, 3],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0,
+        fill: { target: 1, above: 'rgba(251, 191, 36, 0.12)', below: 'rgba(251, 191, 36, 0.12)' },
+        stepped: 'middle' as const,
+        datalabels: { display: false },
+        order: 2,
+      },
+      // P50 line (median) — fill band to P25
+      {
+        label: 'WHO медиана',
+        data: whoP50,
+        borderColor: 'rgba(107, 114, 128, 0.8)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0,
+        fill: { target: 2, above: 'rgba(74, 222, 128, 0.12)', below: 'rgba(74, 222, 128, 0.12)' },
+        stepped: 'middle' as const,
+        datalabels: { display: false },
+        order: 2,
+      },
     ],
   }
 
@@ -405,6 +404,8 @@ function VelocityChart({
           callback: function (_value: unknown, index: number) {
             return labels[index] || null
           },
+          autoSkip: true,
+          maxTicksLimit: 8,
         },
       },
       y: {
@@ -414,7 +415,7 @@ function VelocityChart({
           font: { size: 10 },
           color: '#9ca3af',
           callback: function (value: string | number) {
-            return `${value}%`
+            return `${value}`
           },
         },
       },
@@ -428,17 +429,15 @@ function VelocityChart({
           label: (ctx: TooltipItem<'line'>) => {
             const val = ctx.parsed.y
             if (val == null) return ''
-            if (ctx.dataset.label === 'Прирост (%/день)') {
-              const pt = points.find(
-                (p) => Math.abs(p.dailyGainPct - val) < 0.001,
-              )
+            if (ctx.dataset.label === 'Набор (г/день)') {
+              const pt = points.find((p) => Math.abs(p.gPerDay - val) < 0.15)
               if (pt) {
                 const sign = pt.gainGrams >= 0 ? '+' : ''
-                return `${val.toFixed(2)}%/день (${sign}${Math.round(pt.gainGrams)} г за ${pt.days} дн.)`
+                return `${val.toFixed(1)} г/день (${sign}${pt.gainGrams} г за ${pt.days} дн.)`
               }
-              return `${val.toFixed(2)}%/день`
+              return `${val.toFixed(1)} г/день`
             }
-            return `${ctx.dataset.label}: ${val.toFixed(2)}%`
+            return `${ctx.dataset.label}: ${val} г/день`
           },
         },
       },
@@ -447,17 +446,21 @@ function VelocityChart({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <p className="text-sm font-medium text-gray-500 mb-2">Скорость набора веса (%/день)</p>
+      <p className="text-sm font-medium text-gray-500 mb-2">Набор веса (г/день)</p>
       <Line data={chartData} options={options as Parameters<typeof Line>[0]['options']} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
         <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
-        <span className="flex items-center gap-1 text-xs text-green-600">
-          <span className="inline-block w-2 h-2 rounded-sm bg-green-400 opacity-30" />
-          15-85: норма
+        <span className="flex items-center gap-1 text-xs text-gray-600">
+          <span className="inline-block w-3 h-0.5 bg-gray-500" />
+          медиана
         </span>
         <span className="flex items-center gap-1 text-xs text-amber-500">
           <span className="inline-block w-2 h-2 rounded-sm bg-amber-400 opacity-30" />
-          3-15 / 85-97
+          25-й
+        </span>
+        <span className="flex items-center gap-1 text-xs text-red-400">
+          <span className="inline-block w-3 h-0.5 bg-red-400 opacity-60" />
+          5-й
         </span>
       </div>
     </div>
@@ -472,18 +475,8 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
       lastDate = p.date
       const d = new Date(p.date + 'T00:00:00')
       const months = [
-        'янв',
-        'фев',
-        'мар',
-        'апр',
-        'май',
-        'июн',
-        'июл',
-        'авг',
-        'сен',
-        'окт',
-        'ноя',
-        'дек',
+        'янв', 'фев', 'мар', 'апр', 'май', 'июн',
+        'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
       ]
       return `${d.getDate()} ${months[d.getMonth()]}`
     }
@@ -514,10 +507,7 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
     ...baseLineOptions(),
     scales: {
       ...baseLineOptions().scales,
-      y: {
-        ...baseLineOptions().scales!.y,
-        beginAtZero: false,
-      },
+      y: { ...baseLineOptions().scales!.y, beginAtZero: false },
     },
     plugins: {
       ...baseLineOptions().plugins,
