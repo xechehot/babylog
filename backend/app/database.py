@@ -39,6 +39,11 @@ CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
 CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_entries_occurred_at ON entries(occurred_at);
 CREATE INDEX IF NOT EXISTS idx_entries_upload_id ON entries(upload_id);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key             TEXT PRIMARY KEY,
+    value           TEXT NOT NULL
+);
 """
 
 

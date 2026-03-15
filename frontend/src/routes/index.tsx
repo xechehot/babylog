@@ -113,8 +113,6 @@ function UploadPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">babylog</h1>
-
       {/* Upload area */}
       <label className="block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors">
         <input
