@@ -6,6 +6,12 @@ import type { Entry } from '../../types'
 import type { BabySex } from '../../hooks/useProfile'
 import { baseLineOptions } from './chartConfig'
 import { WHO_BOYS, WHO_GIRLS, PERCENTILE_KEYS, PERCENTILE_LABELS } from './whoWeightData'
+import {
+  VELOCITY_BOYS,
+  VELOCITY_GIRLS,
+  getVelocityBand,
+  type VelocityBand,
+} from './whoVelocityData'
 
 interface WeightPoint {
   date: string
@@ -42,6 +48,48 @@ function interpolateWHO(data: number[], ageMonths: number): number | null {
   return data[lower] * (1 - frac) + data[upper] * frac
 }
 
+const MONTH_NAMES = [
+  'Рожд.',
+  '1 мес',
+  '2 мес',
+  '3 мес',
+  '4 мес',
+  '5 мес',
+  '6 мес',
+  '7 мес',
+  '8 мес',
+  '9 мес',
+  '10 мес',
+  '11 мес',
+  '12 мес',
+  '13 мес',
+  '14 мес',
+  '15 мес',
+  '16 мес',
+  '17 мес',
+  '18 мес',
+  '19 мес',
+  '20 мес',
+  '21 мес',
+  '22 мес',
+  '23 мес',
+  '24 мес',
+]
+
+// WHO band colors
+const BAND_COLORS = {
+  outer: 'rgba(251, 191, 36, 0.15)', // P3-P15 and P85-P97
+  inner: 'rgba(74, 222, 128, 0.15)', // P15-P85
+}
+
+const WHO_LINE_COLORS = {
+  p3: 'rgba(239, 68, 68, 0.5)',
+  p15: 'rgba(251, 191, 36, 0.6)',
+  p50: 'rgba(107, 114, 128, 0.8)',
+  p85: 'rgba(251, 191, 36, 0.6)',
+  p97: 'rgba(239, 68, 68, 0.5)',
+}
+
 interface WeightChartProps {
   entries: Entry[]
   birthDate: string | null
@@ -54,7 +102,6 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
 
   if (points.length < 2 && !birthWeight) return null
 
-  // If sex not set, show invitation
   if (!sex) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
@@ -72,8 +119,8 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   }
 
   const whoData = sex === 'boy' ? WHO_BOYS : WHO_GIRLS
+  const velocityBands = sex === 'boy' ? VELOCITY_BOYS : VELOCITY_GIRLS
 
-  // Build full points array: include birth weight as first point if available
   const allPoints = useMemo(() => {
     if (!birthWeight || !birthDate) return points
     const birthEntry: WeightPoint = {
@@ -82,7 +129,6 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
       weight: birthWeight,
       ageMonths: 0,
     }
-    // Avoid duplicate if first point is already at birth
     if (points.length > 0 && points[0].ageMonths != null && points[0].ageMonths < 0.1) {
       return points
     }
@@ -94,7 +140,6 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   const hasBirthData = birthDate != null && allPoints[0].ageMonths != null
 
   if (!hasBirthData) {
-    // Without birth date, show simple weight chart (no WHO curves)
     return <SimpleWeightChart points={allPoints} />
   }
 
@@ -112,67 +157,42 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   }
   const sortedX = Array.from(allXValues).sort((a, b) => a - b)
 
-  // Re-interpolate WHO data at all x-values
+  const labels = sortedX.map((x) => {
+    const rounded = Math.round(x)
+    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) {
+      return MONTH_NAMES[rounded]
+    }
+    return ''
+  })
+
+  // WHO datasets with colored bands
+  const whoLineColors = Object.values(WHO_LINE_COLORS)
   const whoInterpolated = PERCENTILE_KEYS.map((key, i) => ({
     label: `WHO ${PERCENTILE_LABELS[i]}`,
     data: sortedX.map((x) => interpolateWHO(whoData[key], x)! * 1000),
-    borderColor: [
-      'rgba(156, 163, 175, 0.4)',
-      'rgba(156, 163, 175, 0.5)',
-      'rgba(107, 114, 128, 0.6)',
-      'rgba(156, 163, 175, 0.5)',
-      'rgba(156, 163, 175, 0.4)',
-    ][i],
-    borderWidth: key === 'p50' ? 1.5 : 1,
+    borderColor: whoLineColors[i],
+    borderWidth: key === 'p50' ? 2 : 1,
     borderDash: key === 'p50' ? [] : ([4, 3] as number[]),
     pointRadius: 0,
     pointHoverRadius: 0,
     tension: 0.3,
-    fill: false,
+    fill: false as boolean | { target: number; above: string; below: string },
     datalabels: { display: false },
+    order: 1,
   }))
 
-  // Baby weight data - place at the correct x positions
+  // Fill bands between adjacent WHO curves
+  // Dataset indices: 0=baby, 1=P3, 2=P15, 3=P50, 4=P85, 5=P97
+  if (whoInterpolated.length >= 5) {
+    whoInterpolated[1].fill = { target: 1, above: BAND_COLORS.outer, below: BAND_COLORS.outer } // P15→P3
+    whoInterpolated[2].fill = { target: 2, above: BAND_COLORS.inner, below: BAND_COLORS.inner } // P50→P15
+    whoInterpolated[3].fill = { target: 3, above: BAND_COLORS.inner, below: BAND_COLORS.inner } // P85→P50
+    whoInterpolated[4].fill = { target: 4, above: BAND_COLORS.outer, below: BAND_COLORS.outer } // P97→P85
+  }
+
   const babyData = sortedX.map((x) => {
-    // Find matching point
     const match = allPoints.find((p) => p.ageMonths != null && Math.abs(p.ageMonths - x) < 0.05)
     return match ? match.weight : null
-  })
-
-  const monthNames = [
-    'Рожд.',
-    '1 мес',
-    '2 мес',
-    '3 мес',
-    '4 мес',
-    '5 мес',
-    '6 мес',
-    '7 мес',
-    '8 мес',
-    '9 мес',
-    '10 мес',
-    '11 мес',
-    '12 мес',
-    '13 мес',
-    '14 мес',
-    '15 мес',
-    '16 мес',
-    '17 мес',
-    '18 мес',
-    '19 мес',
-    '20 мес',
-    '21 мес',
-    '22 мес',
-    '23 мес',
-    '24 мес',
-  ]
-
-  const labels = sortedX.map((x) => {
-    const rounded = Math.round(x)
-    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) {
-      return monthNames[rounded]
-    }
-    return ''
   })
 
   const chartData = {
@@ -183,13 +203,14 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
         data: babyData,
         borderColor: '#0d9488',
         backgroundColor: 'rgba(94, 234, 212, 0.5)',
-        borderWidth: 2,
-        pointRadius: 4,
+        borderWidth: 2.5,
+        pointRadius: 5,
         pointBackgroundColor: '#14b8a6',
         tension: 0.2,
         fill: false,
         spanGaps: true,
         datalabels: { display: false },
+        order: 0,
       },
       ...whoInterpolated,
     ],
@@ -232,16 +253,212 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     },
   }
 
+  // Calculate velocity points (daily gain %) between consecutive measurements
+  const velocityPoints: {
+    ageMonths: number
+    dailyGainPct: number
+    date: string
+    gainGrams: number
+    days: number
+  }[] = []
+  for (let i = 1; i < allPoints.length; i++) {
+    const prev = allPoints[i - 1]
+    const curr = allPoints[i]
+    if (prev.ageMonths == null || curr.ageMonths == null) continue
+    const msPerDay = 1000 * 60 * 60 * 24
+    const days =
+      (new Date(curr.occurred_at).getTime() - new Date(prev.occurred_at).getTime()) / msPerDay
+    if (days < 0.5) continue // skip same-day measurements
+    const gainGrams = curr.weight - prev.weight
+    const dailyGainPct = ((gainGrams / prev.weight) / days) * 100
+    const midAge = (prev.ageMonths + curr.ageMonths) / 2
+    velocityPoints.push({
+      ageMonths: midAge,
+      dailyGainPct,
+      date: curr.date,
+      gainGrams,
+      days: Math.round(days),
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Absolute weight chart with WHO bands */}
+      <div className="bg-white rounded-lg border border-gray-200 p-3">
+        <Line data={chartData} options={options} />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
+          <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
+          <span className="flex items-center gap-1 text-xs text-red-400">
+            <span className="inline-block w-3 h-0.5 bg-red-400 opacity-60" />
+            3-й / 97-й
+          </span>
+          <span className="flex items-center gap-1 text-xs text-amber-500">
+            <span className="inline-block w-3 h-0.5 bg-amber-400 opacity-70" />
+            15-й / 85-й
+          </span>
+          <span className="flex items-center gap-1 text-xs text-gray-600">
+            <span className="inline-block w-3 h-0.5 bg-gray-500" />
+            50-й
+          </span>
+        </div>
+      </div>
+
+      {/* Weight velocity chart */}
+      {velocityPoints.length >= 1 && (
+        <VelocityChart points={velocityPoints} bands={velocityBands} />
+      )}
+    </div>
+  )
+}
+
+/** Chart showing daily weight gain rate (%) with WHO velocity norms */
+function VelocityChart({
+  points,
+  bands,
+}: {
+  points: { ageMonths: number; dailyGainPct: number; date: string; gainGrams: number; days: number }[]
+  bands: VelocityBand[]
+}) {
+  // Build x-axis: monthly marks + baby data points
+  const minAge = Math.max(0, Math.floor(Math.min(...points.map((p) => p.ageMonths))))
+  const maxAge = Math.min(24, Math.ceil(Math.max(...points.map((p) => p.ageMonths))))
+  const allX = new Set<number>()
+  for (let m = minAge; m <= maxAge; m++) allX.add(m)
+  for (const p of points) allX.add(Math.round(p.ageMonths * 100) / 100)
+  const sortedX = Array.from(allX).sort((a, b) => a - b)
+
+  const labels = sortedX.map((x) => {
+    const rounded = Math.round(x)
+    if (Math.abs(x - rounded) < 0.05 && rounded >= 0 && rounded <= 24) {
+      return MONTH_NAMES[rounded]
+    }
+    return ''
+  })
+
+  // Baby velocity data at correct x positions
+  const babyVelocity = sortedX.map((x) => {
+    const match = points.find((p) => Math.abs(p.ageMonths - x) < 0.05)
+    return match ? match.dailyGainPct : null
+  })
+
+  // WHO velocity band curves
+  const whoKeys = ['p3', 'p15', 'p50', 'p85', 'p97'] as const
+  const whoLabels = ['WHO 3-й', 'WHO 15-й', 'WHO 50-й', 'WHO 85-й', 'WHO 97-й']
+  const whoLineColors = Object.values(WHO_LINE_COLORS)
+
+  const whoCurves = whoKeys.map((key, i) => ({
+    label: whoLabels[i],
+    data: sortedX.map((x) => {
+      const band = getVelocityBand(bands, x)
+      return band ? band[key] : null
+    }),
+    borderColor: whoLineColors[i],
+    borderWidth: key === 'p50' ? 2 : 1,
+    borderDash: key === 'p50' ? [] : ([4, 3] as number[]),
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    tension: 0.4,
+    fill: false as boolean | { target: number; above: string; below: string },
+    datalabels: { display: false },
+    order: 1,
+    stepped: 'middle' as const,
+  }))
+
+  // Fill bands between WHO curves
+  // Dataset indices: 0=baby, 1=P3, 2=P15, 3=P50, 4=P85, 5=P97
+  if (whoCurves.length >= 5) {
+    whoCurves[1].fill = { target: 1, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
+    whoCurves[2].fill = { target: 2, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
+    whoCurves[3].fill = { target: 3, above: BAND_COLORS.inner, below: BAND_COLORS.inner }
+    whoCurves[4].fill = { target: 4, above: BAND_COLORS.outer, below: BAND_COLORS.outer }
+  }
+
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: 'Прирост (%/день)',
+        data: babyVelocity,
+        borderColor: '#0d9488',
+        backgroundColor: 'rgba(94, 234, 212, 0.5)',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: '#14b8a6',
+        tension: 0.2,
+        fill: false,
+        spanGaps: true,
+        datalabels: { display: false },
+        order: 0,
+      },
+      ...whoCurves,
+    ],
+  }
+
+  const options = {
+    ...baseLineOptions(),
+    scales: {
+      ...baseLineOptions().scales,
+      x: {
+        ...baseLineOptions().scales!.x,
+        ticks: {
+          ...((baseLineOptions().scales!.x as Record<string, unknown>)?.ticks as object),
+          callback: function (_value: unknown, index: number) {
+            return labels[index] || null
+          },
+        },
+      },
+      y: {
+        ...baseLineOptions().scales!.y,
+        beginAtZero: false,
+        ticks: {
+          font: { size: 10 },
+          color: '#9ca3af',
+          callback: function (value: string | number) {
+            return `${value}%`
+          },
+        },
+      },
+    },
+    plugins: {
+      ...baseLineOptions().plugins,
+      tooltip: {
+        ...baseLineOptions().plugins!.tooltip,
+        filter: (item: TooltipItem<'line'>) => item.raw != null,
+        callbacks: {
+          label: (ctx: TooltipItem<'line'>) => {
+            const val = ctx.parsed.y
+            if (val == null) return ''
+            if (ctx.dataset.label === 'Прирост (%/день)') {
+              const pt = points.find(
+                (p) => Math.abs(p.dailyGainPct - val) < 0.001,
+              )
+              if (pt) {
+                const sign = pt.gainGrams >= 0 ? '+' : ''
+                return `${val.toFixed(2)}%/день (${sign}${Math.round(pt.gainGrams)} г за ${pt.days} дн.)`
+              }
+              return `${val.toFixed(2)}%/день`
+            }
+            return `${ctx.dataset.label}: ${val.toFixed(2)}%`
+          },
+        },
+      },
+    },
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <Line data={chartData} options={options} />
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 px-1">
-        <span className="text-xs text-gray-400">ВОЗ:</span>
-        {PERCENTILE_LABELS.map((label) => (
-          <span key={label} className="text-xs text-gray-400">
-            {label}
-          </span>
-        ))}
+      <p className="text-sm font-medium text-gray-500 mb-2">Скорость набора веса (%/день)</p>
+      <Line data={chartData} options={options as Parameters<typeof Line>[0]['options']} />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
+        <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
+        <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="inline-block w-2 h-2 rounded-sm bg-green-400 opacity-30" />
+          15-85: норма
+        </span>
+        <span className="flex items-center gap-1 text-xs text-amber-500">
+          <span className="inline-block w-2 h-2 rounded-sm bg-amber-400 opacity-30" />
+          3-15 / 85-97
+        </span>
       </div>
     </div>
   )

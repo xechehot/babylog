@@ -200,7 +200,7 @@ function DashboardPage() {
 
           {weightData && (weightData.entries.length >= 2 || profile.birth_weight) && (
             <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес (г)</h2>
+              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес и нормы ВОЗ</h2>
               <WeightChart
                 entries={weightData.entries}
                 birthDate={profile.birth_date}
