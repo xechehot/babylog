@@ -276,7 +276,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   )
 }
 
-/** Chart showing daily weight gain (g/day) with WHO velocity norms */
+/** Chart showing weight gain (g/week) with WHO velocity norms */
 function VelocityChart({
   points,
   intervals,
@@ -284,57 +284,38 @@ function VelocityChart({
   points: { ageDays: number; gPerDay: number; date: string; gainGrams: number; days: number }[]
   intervals: VelocityInterval[]
 }) {
-  // Build x-axis in days, with interval boundaries + baby data points
-  const allX = new Set<number>()
-  for (const interval of intervals) {
-    // Only add interval boundaries that are within the range of baby data
-    const minDay = Math.max(0, points[0].ageDays - 5)
-    const maxDay = points[points.length - 1].ageDays + 5
-    if (interval.fromDay >= minDay && interval.fromDay <= maxDay) allX.add(interval.fromDay)
-    if (interval.toDay >= minDay && interval.toDay <= maxDay) allX.add(interval.toDay)
-  }
-  for (const p of points) allX.add(Math.round(p.ageDays))
-  const sortedX = Array.from(allX).sort((a, b) => a - b)
+  // Determine x-axis range from baby data
+  const minDay = Math.max(0, Math.floor(points[0].ageDays) - 3)
+  const maxDay = Math.ceil(points[points.length - 1].ageDays) + 3
 
-  // Labels: show weeks for first 60 days, months after
-  const labels = sortedX.map((d) => {
-    if (d === 0) return 'Рожд.'
-    if (d <= 60) {
-      const weeks = Math.round(d / 7)
-      if (Math.abs(d - weeks * 7) < 2) return `${weeks} нед`
-      return ''
+  // Build WHO norm step data as {x,y} points for linear x-axis
+  // Each interval becomes two points (start and end) at the same y value
+  const relevantIntervals = intervals.filter(
+    (i) => i.toDay > minDay && i.fromDay < maxDay,
+  )
+
+  function whoStepData(key: 'p5' | 'p25' | 'p50') {
+    const pts: { x: number; y: number }[] = []
+    for (const interval of relevantIntervals) {
+      const x0 = Math.max(interval.fromDay, minDay)
+      const x1 = Math.min(interval.toDay, maxDay)
+      pts.push({ x: x0, y: interval[key] * 7 }) // g/day → g/week
+      pts.push({ x: x1, y: interval[key] * 7 })
     }
-    const months = Math.round(d / 30.4375)
-    if (Math.abs(d - months * 30.4375) < 5) return `${months} мес`
-    return ''
-  })
+    return pts
+  }
 
-  // Baby velocity at correct x positions
-  const babyVelocity = sortedX.map((x) => {
-    const match = points.find((p) => Math.abs(p.ageDays - x) < 2)
-    return match ? match.gPerDay : null
-  })
-
-  // WHO velocity norm curves (stepped, using interval midpoints)
-  const whoP5 = sortedX.map((x) => {
-    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
-    return interval ? interval.p5 : null
-  })
-  const whoP25 = sortedX.map((x) => {
-    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
-    return interval ? interval.p25 : null
-  })
-  const whoP50 = sortedX.map((x) => {
-    const interval = intervals.find((i) => x >= i.fromDay && x < i.toDay)
-    return interval ? interval.p50 : null
-  })
+  // Baby data as {x,y} points — normalized to g/week
+  const babyData = points.map((p) => ({
+    x: Math.round(p.ageDays),
+    y: Math.round(p.gPerDay * 7 * 10) / 10,
+  }))
 
   const chartData = {
-    labels,
     datasets: [
       {
-        label: 'Набор (г/день)',
-        data: babyVelocity,
+        label: 'Набор (г/нед)',
+        data: babyData,
         borderColor: '#0d9488',
         backgroundColor: 'rgba(94, 234, 212, 0.5)',
         borderWidth: 2.5,
@@ -346,10 +327,9 @@ function VelocityChart({
         datalabels: { display: false },
         order: 0,
       },
-      // P5 line (danger threshold)
       {
         label: 'WHO 5-й',
-        data: whoP5,
+        data: whoStepData('p5'),
         borderColor: 'rgba(239, 68, 68, 0.5)',
         borderWidth: 1,
         borderDash: [4, 3],
@@ -357,14 +337,12 @@ function VelocityChart({
         pointHoverRadius: 0,
         tension: 0,
         fill: false,
-        stepped: 'middle' as const,
         datalabels: { display: false },
         order: 2,
       },
-      // P25 line (watch threshold) — fill band to P5
       {
         label: 'WHO 25-й',
-        data: whoP25,
+        data: whoStepData('p25'),
         borderColor: 'rgba(251, 191, 36, 0.6)',
         borderWidth: 1,
         borderDash: [4, 3],
@@ -372,72 +350,88 @@ function VelocityChart({
         pointHoverRadius: 0,
         tension: 0,
         fill: { target: 1, above: 'rgba(251, 191, 36, 0.12)', below: 'rgba(251, 191, 36, 0.12)' },
-        stepped: 'middle' as const,
         datalabels: { display: false },
         order: 2,
       },
-      // P50 line (median) — fill band to P25
       {
         label: 'WHO медиана',
-        data: whoP50,
+        data: whoStepData('p50'),
         borderColor: 'rgba(107, 114, 128, 0.8)',
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 0,
         tension: 0,
         fill: { target: 2, above: 'rgba(74, 222, 128, 0.12)', below: 'rgba(74, 222, 128, 0.12)' },
-        stepped: 'middle' as const,
         datalabels: { display: false },
         order: 2,
       },
     ],
   }
 
-  const options = {
-    ...baseLineOptions(),
+  const options: Parameters<typeof Line>[0]['options'] = {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 1.8,
+    events: ['mousemove', 'mouseenter', 'touchstart', 'touchmove'],
+    interaction: { mode: 'nearest', intersect: false },
     scales: {
-      ...baseLineOptions().scales,
       x: {
-        ...baseLineOptions().scales!.x,
-        ticks: {
-          ...((baseLineOptions().scales!.x as Record<string, unknown>)?.ticks as object),
-          callback: function (_value: unknown, index: number) {
-            return labels[index] || null
-          },
-          autoSkip: true,
-          maxTicksLimit: 8,
-        },
-      },
-      y: {
-        ...baseLineOptions().scales!.y,
-        beginAtZero: false,
+        type: 'linear' as const,
+        min: minDay,
+        max: maxDay,
+        grid: { display: false },
         ticks: {
           font: { size: 10 },
           color: '#9ca3af',
+          maxRotation: 0,
           callback: function (value: string | number) {
-            return `${value}`
+            const d = Number(value)
+            if (d === 0) return 'Рожд.'
+            if (d <= 60) {
+              if (d % 7 === 0) return `${d / 7} нед`
+              return null
+            }
+            const months = Math.round(d / 30.4375)
+            if (Math.abs(d - months * 30.4375) < 3) return `${months} мес`
+            return null
           },
+          stepSize: maxDay <= 60 ? 7 : 30,
+        },
+      },
+      y: {
+        grid: { color: '#f3f4f6' },
+        ticks: {
+          font: { size: 10 },
+          color: '#9ca3af',
         },
       },
     },
     plugins: {
-      ...baseLineOptions().plugins,
+      legend: { display: false },
+      datalabels: { display: false },
       tooltip: {
-        ...baseLineOptions().plugins!.tooltip,
+        enabled: true,
         filter: (item: TooltipItem<'line'>) => item.raw != null,
         callbacks: {
+          title: (items: TooltipItem<'line'>[]) => {
+            if (!items.length) return ''
+            const d = items[0].parsed.x ?? 0
+            if (d <= 60) return `День ${Math.round(d)} (${(d / 7).toFixed(1)} нед)`
+            return `${Math.round(d / 30.4375)} мес`
+          },
           label: (ctx: TooltipItem<'line'>) => {
             const val = ctx.parsed.y
             if (val == null) return ''
-            if (ctx.dataset.label === 'Набор (г/день)') {
-              const pt = points.find((p) => Math.abs(p.gPerDay - val) < 0.15)
+            if (ctx.dataset.label === 'Набор (г/нед)') {
+              const px = ctx.parsed.x ?? 0
+              const pt = points.find((p) => Math.abs(Math.round(p.ageDays) - px) < 2)
               if (pt) {
                 const sign = pt.gainGrams >= 0 ? '+' : ''
-                return `${val.toFixed(1)} г/день (${sign}${pt.gainGrams} г за ${pt.days} дн.)`
+                return `${Math.round(val)} г/нед (${sign}${pt.gainGrams} г за ${pt.days} дн.)`
               }
-              return `${val.toFixed(1)} г/день`
+              return `${Math.round(val)} г/нед`
             }
-            return `${ctx.dataset.label}: ${val} г/день`
+            return `${ctx.dataset.label}: ${Math.round(val)} г/нед`
           },
         },
       },
@@ -446,8 +440,8 @@ function VelocityChart({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <p className="text-sm font-medium text-gray-500 mb-2">Набор веса (г/день)</p>
-      <Line data={chartData} options={options as Parameters<typeof Line>[0]['options']} />
+      <p className="text-sm font-medium text-gray-500 mb-2">Набор веса (г/неделю)</p>
+      <Line data={chartData} options={options} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
         <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
         <span className="flex items-center gap-1 text-xs text-gray-600">
