@@ -218,35 +218,58 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     },
   }
 
-  // Calculate velocity points (g/day) between consecutive measurements
+  // Aggregate baby weight gain into WHO-matching intervals
+  // For each interval, interpolate baby weight at start/end and compute gain → g/week
   const velocityPoints: {
-    ageDays: number
-    gPerDay: number
-    date: string
-    gainGrams: number
-    days: number
+    ageDays: number // midpoint of interval
+    gPerDay: number // g/day rate
+    gainGrams: number // total grams gained in interval
+    days: number // interval length
   }[] = []
-  const msPerDay = 1000 * 60 * 60 * 24
-  for (let i = 1; i < allPoints.length; i++) {
-    const prev = allPoints[i - 1]
-    const curr = allPoints[i]
-    if (prev.ageDays == null || curr.ageDays == null) continue
-    const days =
-      (new Date(curr.occurred_at).getTime() - new Date(prev.occurred_at).getTime()) / msPerDay
-    if (days < 0.5) continue
-    const gainGrams = curr.weight - prev.weight
-    const gPerDay = gainGrams / days
-    const midAgeDays = (prev.ageDays + curr.ageDays) / 2
-    velocityPoints.push({
-      ageDays: midAgeDays,
-      gPerDay: Math.round(gPerDay * 10) / 10,
-      date: curr.date,
-      gainGrams: Math.round(gainGrams),
-      days: Math.round(days),
-    })
+
+  /** Interpolate baby weight at a given age in days */
+  function interpolateBabyWeight(ageDays: number): number | null {
+    // Find surrounding points
+    const pts = allPoints.filter((p) => p.ageDays != null) as (WeightPoint & { ageDays: number })[]
+    if (pts.length === 0) return null
+    if (ageDays <= pts[0].ageDays) return pts[0].weight
+    if (ageDays >= pts[pts.length - 1].ageDays) return pts[pts.length - 1].weight
+    for (let i = 0; i < pts.length - 1; i++) {
+      if (ageDays >= pts[i].ageDays && ageDays <= pts[i + 1].ageDays) {
+        const span = pts[i + 1].ageDays - pts[i].ageDays
+        if (span < 0.01) return pts[i].weight
+        const frac = (ageDays - pts[i].ageDays) / span
+        return pts[i].weight * (1 - frac) + pts[i + 1].weight * frac
+      }
+    }
+    return null
   }
 
   const velocityIntervals = getAllVelocityIntervals(sex, birthWeight)
+
+  // Compute baby's gain for each WHO interval that overlaps with baby data range
+  const babyMinDay = allPoints[0].ageDays ?? 0
+  const babyMaxDay = allPoints[allPoints.length - 1].ageDays ?? 0
+  for (const interval of velocityIntervals) {
+    // Skip intervals completely outside baby data range
+    if (interval.toDay <= babyMinDay || interval.fromDay >= babyMaxDay) continue
+    // Clamp interval to baby data range
+    const from = Math.max(interval.fromDay, babyMinDay)
+    const to = Math.min(interval.toDay, babyMaxDay)
+    const span = to - from
+    if (span < 1) continue // need at least 1 day of overlap
+    const w0 = interpolateBabyWeight(from)
+    const w1 = interpolateBabyWeight(to)
+    if (w0 == null || w1 == null) continue
+    const gainGrams = w1 - w0
+    const gPerDay = gainGrams / span
+    velocityPoints.push({
+      ageDays: (from + to) / 2,
+      gPerDay: Math.round(gPerDay * 10) / 10,
+      gainGrams: Math.round(gainGrams),
+      days: Math.round(span),
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -281,7 +304,7 @@ function VelocityChart({
   points,
   intervals,
 }: {
-  points: { ageDays: number; gPerDay: number; date: string; gainGrams: number; days: number }[]
+  points: { ageDays: number; gPerDay: number; gainGrams: number; days: number }[]
   intervals: VelocityInterval[]
 }) {
   // Determine x-axis range from baby data
