@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useProfile, formatAge } from '../hooks/useProfile'
+import type { BabySex } from '../hooks/useProfile'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -13,6 +14,7 @@ function ProfilePage() {
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [birthWeight, setBirthWeight] = useState('')
+  const [sex, setSex] = useState<BabySex | ''>('')
 
   // Populate form when profile loads
   useEffect(() => {
@@ -20,6 +22,7 @@ function ProfilePage() {
       setName(profile.baby_name ?? '')
       setBirthDate(profile.birth_date ?? '')
       setBirthWeight(profile.birth_weight ? String(profile.birth_weight) : '')
+      setSex(profile.sex ?? '')
     }
   }, [isLoaded, profile])
 
@@ -28,6 +31,7 @@ function ProfilePage() {
       baby_name: name.trim() || null,
       birth_date: birthDate || null,
       birth_weight: birthWeight ? parseInt(birthWeight, 10) : null,
+      sex: sex || null,
     })
     navigate({ to: '/' })
   }
@@ -121,6 +125,34 @@ function ProfilePage() {
               {(parseInt(birthWeight, 10) / 1000).toFixed(2)} кг
             </p>
           )}
+        </div>
+
+        {/* Sex */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Пол ребёнка</label>
+          <div className="flex gap-2">
+            {(
+              [
+                ['boy', 'Мальчик'],
+                ['girl', 'Девочка'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setSex(sex === value ? '' : value)}
+                className={`flex-1 py-2.5 rounded-lg text-base font-medium transition-colors border ${
+                  sex === value
+                    ? value === 'boy'
+                      ? 'bg-blue-100 border-blue-400 text-blue-700'
+                      : 'bg-pink-100 border-pink-400 text-pink-700'
+                    : 'bg-white border-gray-300 text-gray-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Save button */}
