@@ -11,19 +11,21 @@ async def test_get_settings_defaults(client: AsyncClient):
     assert data["baby_name"] is None
     assert data["birth_date"] is None
     assert data["birth_weight"] is None
+    assert data["sex"] is None
 
 
 @pytest.mark.asyncio
 async def test_put_and_get_roundtrip(client: AsyncClient):
     """PUT then GET returns the same values."""
     payload = {"baby_name": "Миша", "birth_date": "2026-01-15", "birth_weight": 3500}
+    expected = {**payload, "sex": None}
     put_resp = await client.put("/api/settings", json=payload)
     assert put_resp.status_code == 200
-    assert put_resp.json() == payload
+    assert put_resp.json() == expected
 
     get_resp = await client.get("/api/settings")
     assert get_resp.status_code == 200
-    assert get_resp.json() == payload
+    assert get_resp.json() == expected
 
 
 @pytest.mark.asyncio
@@ -62,7 +64,7 @@ async def test_clear_all_values(client: AsyncClient):
         json={"baby_name": None, "birth_date": None, "birth_weight": None},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"baby_name": None, "birth_date": None, "birth_weight": None}
+    assert resp.json() == {"baby_name": None, "birth_date": None, "birth_weight": None, "sex": None}
 
 
 @pytest.mark.asyncio
@@ -96,3 +98,31 @@ async def test_birth_weight_boundary_valid(client: AsyncClient):
     resp = await client.put("/api/settings", json={"birth_weight": 10000})
     assert resp.status_code == 200
     assert resp.json()["birth_weight"] == 10000
+
+
+@pytest.mark.asyncio
+async def test_sex_field(client: AsyncClient):
+    """PUT with sex field stores and retrieves correctly."""
+    resp = await client.put("/api/settings", json={"sex": "boy"})
+    assert resp.status_code == 200
+    assert resp.json()["sex"] == "boy"
+
+    get_resp = await client.get("/api/settings")
+    assert get_resp.json()["sex"] == "boy"
+
+    # Update to girl
+    resp = await client.put("/api/settings", json={"sex": "girl"})
+    assert resp.status_code == 200
+    assert resp.json()["sex"] == "girl"
+
+    # Clear sex
+    resp = await client.put("/api/settings", json={"sex": None})
+    assert resp.status_code == 200
+    assert resp.json()["sex"] is None
+
+
+@pytest.mark.asyncio
+async def test_sex_invalid_value(client: AsyncClient):
+    """PUT with invalid sex value returns 422."""
+    resp = await client.put("/api/settings", json={"sex": "other"})
+    assert resp.status_code == 422

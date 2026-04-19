@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
 
+export type BabySex = 'boy' | 'girl'
+
 export interface BabyProfile {
   baby_name: string | null
   birth_date: string | null // YYYY-MM-DD
   birth_weight: number | null // grams
+  sex: BabySex | null
 }
 
 const PROFILE_KEY = ['settings']
@@ -29,6 +32,7 @@ export function useProfile() {
       baby_name: null,
       birth_date: null,
       birth_weight: null,
+      sex: null,
     },
     isLoaded: !isLoading,
     saveProfile: mutation.mutateAsync,
