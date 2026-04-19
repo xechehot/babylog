@@ -6,7 +6,7 @@
 export interface VelocityInterval {
   fromDay: number
   toDay: number
-  p5: number  // g/day
+  p5: number // g/day
   p25: number // g/day
   p50: number // g/day
 }
@@ -107,43 +107,43 @@ const GIRLS_EARLY: Record<BirthWeightKey, VelocityInterval[]> = {
 // g/month ÷ 30.44 days
 
 const BOYS_MONTHLY: VelocityInterval[] = [
-  { fromDay: 60, toDay: 91, p5: 10, p25: 22, p50: 27 },   // 2-3mo
-  { fromDay: 91, toDay: 122, p5: 5, p25: 16, p50: 20 },   // 3-4mo
-  { fromDay: 122, toDay: 152, p5: 2, p25: 13, p50: 17 },   // 4-5mo
-  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 14 },   // 5-6mo
-  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 12 },   // 6-7mo
-  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 },   // 7-8mo
-  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 },    // 8-9mo
-  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 9 },    // 9-10mo
-  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 },    // 10-11mo
-  { fromDay: 335, toDay: 365, p5: -7, p25: 3, p50: 8 },    // 11-12mo
-  { fromDay: 365, toDay: 426, p5: -5, p25: 4, p50: 7 },    // 12-14mo
-  { fromDay: 426, toDay: 487, p5: -5, p25: 3, p50: 7 },    // 14-16mo
-  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 },    // 16-18mo
-  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 6 },    // 18-20mo
-  { fromDay: 609, toDay: 670, p5: -6, p25: 3, p50: 6 },    // 20-22mo
-  { fromDay: 670, toDay: 730, p5: -6, p25: 3, p50: 6 },    // 22-24mo
+  { fromDay: 60, toDay: 91, p5: 10, p25: 22, p50: 27 }, // 2-3mo
+  { fromDay: 91, toDay: 122, p5: 5, p25: 16, p50: 20 }, // 3-4mo
+  { fromDay: 122, toDay: 152, p5: 2, p25: 13, p50: 17 }, // 4-5mo
+  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 14 }, // 5-6mo
+  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 12 }, // 6-7mo
+  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 }, // 7-8mo
+  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 }, // 8-9mo
+  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 9 }, // 9-10mo
+  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 }, // 10-11mo
+  { fromDay: 335, toDay: 365, p5: -7, p25: 3, p50: 8 }, // 11-12mo
+  { fromDay: 365, toDay: 426, p5: -5, p25: 4, p50: 7 }, // 12-14mo
+  { fromDay: 426, toDay: 487, p5: -5, p25: 3, p50: 7 }, // 14-16mo
+  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 }, // 16-18mo
+  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 6 }, // 18-20mo
+  { fromDay: 609, toDay: 670, p5: -6, p25: 3, p50: 6 }, // 20-22mo
+  { fromDay: 670, toDay: 730, p5: -6, p25: 3, p50: 6 }, // 22-24mo
 ]
 
 // ── Girls: 2–24 months, g/day ──
 
 const GIRLS_MONTHLY: VelocityInterval[] = [
-  { fromDay: 60, toDay: 91, p5: 8, p25: 19, p50: 24 },    // 2-3mo
-  { fromDay: 91, toDay: 122, p5: 4, p25: 15, p50: 19 },   // 3-4mo
-  { fromDay: 122, toDay: 152, p5: 1, p25: 12, p50: 16 },   // 4-5mo
-  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 13 },   // 5-6mo
-  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 11 },   // 6-7mo
-  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 },   // 7-8mo
-  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 },    // 8-9mo
-  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 8 },    // 9-10mo
-  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 },    // 10-11mo
-  { fromDay: 335, toDay: 365, p5: -6, p25: 3, p50: 8 },    // 11-12mo
-  { fromDay: 365, toDay: 426, p5: -4, p25: 4, p50: 7 },    // 12-14mo
-  { fromDay: 426, toDay: 487, p5: -4, p25: 4, p50: 7 },    // 14-16mo
-  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 },    // 16-18mo
-  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 7 },    // 18-20mo
-  { fromDay: 609, toDay: 670, p5: -5, p25: 3, p50: 6 },    // 20-22mo
-  { fromDay: 670, toDay: 730, p5: -6, p25: 2, p50: 6 },    // 22-24mo
+  { fromDay: 60, toDay: 91, p5: 8, p25: 19, p50: 24 }, // 2-3mo
+  { fromDay: 91, toDay: 122, p5: 4, p25: 15, p50: 19 }, // 3-4mo
+  { fromDay: 122, toDay: 152, p5: 1, p25: 12, p50: 16 }, // 4-5mo
+  { fromDay: 152, toDay: 183, p5: -1, p25: 9, p50: 13 }, // 5-6mo
+  { fromDay: 183, toDay: 213, p5: -3, p25: 7, p50: 11 }, // 6-7mo
+  { fromDay: 213, toDay: 244, p5: -4, p25: 6, p50: 10 }, // 7-8mo
+  { fromDay: 244, toDay: 274, p5: -5, p25: 5, p50: 9 }, // 8-9mo
+  { fromDay: 274, toDay: 305, p5: -6, p25: 4, p50: 8 }, // 9-10mo
+  { fromDay: 305, toDay: 335, p5: -6, p25: 3, p50: 8 }, // 10-11mo
+  { fromDay: 335, toDay: 365, p5: -6, p25: 3, p50: 8 }, // 11-12mo
+  { fromDay: 365, toDay: 426, p5: -4, p25: 4, p50: 7 }, // 12-14mo
+  { fromDay: 426, toDay: 487, p5: -4, p25: 4, p50: 7 }, // 14-16mo
+  { fromDay: 487, toDay: 548, p5: -5, p25: 3, p50: 7 }, // 16-18mo
+  { fromDay: 548, toDay: 609, p5: -5, p25: 3, p50: 7 }, // 18-20mo
+  { fromDay: 609, toDay: 670, p5: -5, p25: 3, p50: 6 }, // 20-22mo
+  { fromDay: 670, toDay: 730, p5: -6, p25: 2, p50: 6 }, // 22-24mo
 ]
 
 /** Get velocity norms (g/day) for a given age, sex, and birth weight */

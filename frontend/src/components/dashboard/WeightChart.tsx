@@ -47,10 +47,31 @@ function interpolateWHO(data: number[], ageMonths: number): number | null {
 }
 
 const MONTH_NAMES = [
-  'Рожд.', '1 мес', '2 мес', '3 мес', '4 мес', '5 мес', '6 мес',
-  '7 мес', '8 мес', '9 мес', '10 мес', '11 мес', '12 мес',
-  '13 мес', '14 мес', '15 мес', '16 мес', '17 мес', '18 мес',
-  '19 мес', '20 мес', '21 мес', '22 мес', '23 мес', '24 мес',
+  'Рожд.',
+  '1 мес',
+  '2 мес',
+  '3 мес',
+  '4 мес',
+  '5 мес',
+  '6 мес',
+  '7 мес',
+  '8 мес',
+  '9 мес',
+  '10 мес',
+  '11 мес',
+  '12 мес',
+  '13 мес',
+  '14 мес',
+  '15 мес',
+  '16 мес',
+  '17 мес',
+  '18 мес',
+  '19 мес',
+  '20 мес',
+  '21 мес',
+  '22 мес',
+  '23 мес',
+  '24 мес',
 ]
 
 const BAND_COLORS = {
@@ -313,9 +334,7 @@ function VelocityChart({
 
   // Build WHO norm step data as {x,y} points for linear x-axis
   // Each interval becomes two points (start and end) at the same y value
-  const relevantIntervals = intervals.filter(
-    (i) => i.toDay > minDay && i.fromDay < maxDay,
-  )
+  const relevantIntervals = intervals.filter((i) => i.toDay > minDay && i.fromDay < maxDay)
 
   function whoStepData(key: 'p5' | 'p25' | 'p50') {
     const pts: { x: number; y: number }[] = []
@@ -492,8 +511,18 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
       lastDate = p.date
       const d = new Date(p.date + 'T00:00:00')
       const months = [
-        'янв', 'фев', 'мар', 'апр', 'май', 'июн',
-        'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+        'янв',
+        'фев',
+        'мар',
+        'апр',
+        'май',
+        'июн',
+        'июл',
+        'авг',
+        'сен',
+        'окт',
+        'ноя',
+        'дек',
       ]
       return `${d.getDate()} ${months[d.getMonth()]}`
     }
