@@ -4,9 +4,12 @@ import { Link } from '@tanstack/react-router'
 import type { TooltipItem } from 'chart.js'
 import type { Entry } from '../../types'
 import type { BabySex } from '../../hooks/useProfile'
-import { baseLineOptions } from './chartConfig'
+import { baseLineOptions, BR_CHART } from './chartConfig'
 import { WHO_BOYS, WHO_GIRLS, PERCENTILE_KEYS, PERCENTILE_LABELS } from './whoWeightData'
 import { getAllVelocityIntervals, type VelocityInterval } from './whoVelocityData'
+import { ChartCard } from '../br/ChartCard'
+import { LegendRow } from '../br/LegendRow'
+import { BR } from '../br/theme'
 
 interface WeightPoint {
   date: string
@@ -74,17 +77,18 @@ const MONTH_NAMES = [
   '24 мес',
 ]
 
+// Blade Runner WHO palette — outer band amber tint, inner band cyan tint.
 const BAND_COLORS = {
-  outer: 'rgba(251, 191, 36, 0.15)',
-  inner: 'rgba(74, 222, 128, 0.15)',
+  outer: 'rgba(255,179,71,0.10)',
+  inner: 'rgba(100,240,232,0.10)',
 }
 
 const WHO_LINE_COLORS = {
-  p3: 'rgba(239, 68, 68, 0.5)',
-  p15: 'rgba(251, 191, 36, 0.6)',
-  p50: 'rgba(107, 114, 128, 0.8)',
-  p85: 'rgba(251, 191, 36, 0.6)',
-  p97: 'rgba(239, 68, 68, 0.5)',
+  p3: 'rgba(255,77,77,0.55)',
+  p15: 'rgba(255,179,71,0.60)',
+  p50: 'rgba(240,225,200,0.80)',
+  p85: 'rgba(255,179,71,0.60)',
+  p97: 'rgba(255,77,77,0.55)',
 }
 
 interface WeightChartProps {
@@ -96,26 +100,6 @@ interface WeightChartProps {
 
 export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChartProps) {
   const points = useMemo(() => buildWeightPoints(entries, birthDate), [entries, birthDate])
-
-  if (points.length < 2 && !birthWeight) return null
-
-  if (!sex) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
-        <p className="text-gray-500 text-sm mb-2">
-          Для отображения кривых роста ВОЗ укажите пол ребёнка
-        </p>
-        <Link
-          to="/profile"
-          className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Перейти в профиль
-        </Link>
-      </div>
-    )
-  }
-
-  const whoData = sex === 'boy' ? WHO_BOYS : WHO_GIRLS
 
   const allPoints = useMemo(() => {
     if (!birthWeight || !birthDate) return points
@@ -132,7 +116,66 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     return [birthEntry, ...points]
   }, [points, birthWeight, birthDate])
 
+  if (points.length < 2 && !birthWeight) return null
+
+  if (!sex) {
+    return (
+      <div
+        style={{
+          border: `1px solid ${BR.line}`,
+          background: 'linear-gradient(180deg, rgba(255,179,71,0.025), rgba(6,8,10,0.4))',
+          padding: 24,
+          textAlign: 'center',
+          marginBottom: 14,
+        }}
+      >
+        <div
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 8.5,
+            letterSpacing: 2.5,
+            color: BR.rose,
+            textShadow: `0 0 8px ${BR.rose}55`,
+            marginBottom: 8,
+          }}
+        >
+          PROFILE · CONFIG REQUIRED
+        </div>
+        <p
+          style={{
+            fontFamily: BR.serif,
+            fontStyle: 'italic',
+            fontSize: 13,
+            color: BR.body,
+            marginBottom: 14,
+          }}
+        >
+          Для отображения кривых роста ВОЗ укажите пол ребёнка
+        </p>
+        <Link
+          to="/profile"
+          className="inline-block uppercase"
+          style={{
+            border: `1px solid ${BR.amber}`,
+            color: BR.amber,
+            fontFamily: BR.mono,
+            letterSpacing: 2,
+            fontSize: 11,
+            padding: '10px 14px',
+            background: 'rgba(255,179,71,0.12)',
+            textShadow: `0 0 10px ${BR.amberGlow}`,
+          }}
+        >
+          Перейти в профиль
+        </Link>
+      </div>
+    )
+  }
+
   if (allPoints.length < 2) return null
+
+  const whoData = sex === 'boy' ? WHO_BOYS : WHO_GIRLS
 
   const hasBirthData = birthDate != null && allPoints[0].ageMonths != null
 
@@ -190,12 +233,14 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
       {
         label: 'Вес (г)',
         data: babyData,
-        borderColor: '#0d9488',
-        backgroundColor: 'rgba(94, 234, 212, 0.5)',
+        borderColor: BR_CHART.amber,
+        backgroundColor: BR_CHART.amber,
         borderWidth: 2.5,
         pointRadius: 5,
-        pointBackgroundColor: '#14b8a6',
-        tension: 0.2,
+        pointBackgroundColor: BR_CHART.amber,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
+        tension: 0.25,
         fill: false,
         spanGaps: true,
         datalabels: { display: false },
@@ -293,30 +338,30 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <>
+      <ChartCard
+        kicker="LINE · WHO BANDS"
+        title="Weight vs WHO"
+        subtitle="кг · against WHO percentile curves"
+        accent={BR_CHART.rose}
+        footer={
+          <LegendRow
+            items={[
+              { color: BR_CHART.amber, label: 'вес · baby' },
+              { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50-й' },
+              { color: 'rgba(255,179,71,0.60)', line: true, label: '15 / 85' },
+              { color: 'rgba(255,77,77,0.55)', line: true, label: '3 / 97' },
+            ]}
+          />
+        }
+      >
         <Line data={chartData} options={options} />
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
-          <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
-          <span className="flex items-center gap-1 text-xs text-red-400">
-            <span className="inline-block w-3 h-0.5 bg-red-400 opacity-60" />
-            3-й / 97-й
-          </span>
-          <span className="flex items-center gap-1 text-xs text-amber-500">
-            <span className="inline-block w-3 h-0.5 bg-amber-400 opacity-70" />
-            15-й / 85-й
-          </span>
-          <span className="flex items-center gap-1 text-xs text-gray-600">
-            <span className="inline-block w-3 h-0.5 bg-gray-500" />
-            50-й
-          </span>
-        </div>
-      </div>
+      </ChartCard>
 
       {velocityPoints.length >= 1 && (
         <VelocityChart points={velocityPoints} intervals={velocityIntervals} />
       )}
-    </div>
+    </>
   )
 }
 
@@ -358,12 +403,14 @@ function VelocityChart({
       {
         label: 'Набор (г/нед)',
         data: babyData,
-        borderColor: '#0d9488',
-        backgroundColor: 'rgba(94, 234, 212, 0.5)',
+        borderColor: BR_CHART.amber,
+        backgroundColor: BR_CHART.amber,
         borderWidth: 2.5,
         pointRadius: 5,
-        pointBackgroundColor: '#14b8a6',
-        tension: 0.2,
+        pointBackgroundColor: BR_CHART.amber,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
+        tension: 0.25,
         fill: false,
         spanGaps: true,
         datalabels: { display: false },
@@ -372,7 +419,7 @@ function VelocityChart({
       {
         label: 'WHO 5-й',
         data: whoStepData('p5'),
-        borderColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: 'rgba(255,77,77,0.55)',
         borderWidth: 1,
         borderDash: [4, 3],
         pointRadius: 0,
@@ -385,29 +432,34 @@ function VelocityChart({
       {
         label: 'WHO 25-й',
         data: whoStepData('p25'),
-        borderColor: 'rgba(251, 191, 36, 0.6)',
+        borderColor: 'rgba(255,179,71,0.60)',
         borderWidth: 1,
         borderDash: [4, 3],
         pointRadius: 0,
         pointHoverRadius: 0,
         tension: 0,
-        fill: { target: 1, above: 'rgba(251, 191, 36, 0.12)', below: 'rgba(251, 191, 36, 0.12)' },
+        fill: { target: 1, above: 'rgba(255,179,71,0.10)', below: 'rgba(255,179,71,0.10)' },
         datalabels: { display: false },
         order: 2,
       },
       {
         label: 'WHO медиана',
         data: whoStepData('p50'),
-        borderColor: 'rgba(107, 114, 128, 0.8)',
+        borderColor: 'rgba(240,225,200,0.80)',
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 0,
         tension: 0,
-        fill: { target: 2, above: 'rgba(74, 222, 128, 0.12)', below: 'rgba(74, 222, 128, 0.12)' },
+        fill: { target: 2, above: 'rgba(100,240,232,0.10)', below: 'rgba(100,240,232,0.10)' },
         datalabels: { display: false },
         order: 2,
       },
     ],
+  }
+
+  const TICK_FONT = {
+    family: '"JetBrains Mono", ui-monospace, monospace',
+    size: 10,
   }
 
   const options: Parameters<typeof Line>[0]['options'] = {
@@ -421,10 +473,11 @@ function VelocityChart({
         type: 'linear' as const,
         min: minDay,
         max: maxDay,
-        grid: { display: false },
+        grid: { display: false, color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: true },
         ticks: {
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: BR_CHART.dim,
           maxRotation: 0,
           callback: function (value: string | number) {
             const d = Number(value)
@@ -441,10 +494,11 @@ function VelocityChart({
         },
       },
       y: {
-        grid: { color: '#f3f4f6' },
+        grid: { color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: false },
         ticks: {
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: BR_CHART.dim,
         },
       },
     },
@@ -453,6 +507,16 @@ function VelocityChart({
       datalabels: { display: false },
       tooltip: {
         enabled: true,
+        backgroundColor: 'rgba(6,8,10,0.92)',
+        borderColor: BR_CHART.amberA,
+        borderWidth: 1,
+        titleFont: { ...TICK_FONT, weight: 500 },
+        titleColor: BR_CHART.amber,
+        bodyFont: { ...TICK_FONT, size: 11 },
+        bodyColor: BR_CHART.body,
+        padding: 10,
+        cornerRadius: 0,
+        displayColors: false,
         filter: (item: TooltipItem<'line'>) => item.raw != null,
         callbacks: {
           title: (items: TooltipItem<'line'>[]) => {
@@ -481,25 +545,24 @@ function VelocityChart({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <p className="text-sm font-medium text-gray-500 mb-2">Набор веса (г/неделю)</p>
+    <ChartCard
+      kicker="LINE · VELOCITY"
+      title="Weight gain"
+      subtitle="г в неделю"
+      accent={BR_CHART.amber}
+      footer={
+        <LegendRow
+          items={[
+            { color: BR_CHART.amber, label: 'набор · baby' },
+            { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50-й' },
+            { color: 'rgba(255,179,71,0.60)', line: true, label: 'WHO · 25' },
+            { color: 'rgba(255,77,77,0.55)', line: true, label: 'WHO · 5' },
+          ]}
+        />
+      }
+    >
       <Line data={chartData} options={options} />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 px-1">
-        <span className="text-xs text-gray-500 font-medium">ВОЗ:</span>
-        <span className="flex items-center gap-1 text-xs text-gray-600">
-          <span className="inline-block w-3 h-0.5 bg-gray-500" />
-          медиана
-        </span>
-        <span className="flex items-center gap-1 text-xs text-amber-500">
-          <span className="inline-block w-2 h-2 rounded-sm bg-amber-400 opacity-30" />
-          25-й
-        </span>
-        <span className="flex items-center gap-1 text-xs text-red-400">
-          <span className="inline-block w-3 h-0.5 bg-red-400 opacity-60" />
-          5-й
-        </span>
-      </div>
-    </div>
+    </ChartCard>
   )
 }
 
@@ -537,12 +600,14 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
       {
         label: 'Вес (г)',
         data: weights,
-        borderColor: '#0d9488',
-        backgroundColor: 'rgba(94, 234, 212, 0.5)',
-        borderWidth: 2,
+        borderColor: BR_CHART.amber,
+        backgroundColor: BR_CHART.amberFill,
+        borderWidth: 2.5,
         pointRadius: 4,
-        pointBackgroundColor: '#14b8a6',
-        tension: 0.2,
+        pointBackgroundColor: BR_CHART.amber,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
+        tension: 0.25,
         fill: true,
         datalabels: { display: false },
       },
@@ -567,8 +632,8 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <ChartCard kicker="LINE · MASS" title="Weight" subtitle="граммы" accent={BR_CHART.rose}>
       <Line data={absData} options={absOptions} />
-    </div>
+    </ChartCard>
   )
 }
