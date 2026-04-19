@@ -225,11 +225,16 @@ function DashboardPage() {
             </>
           )}
 
-          {weightData && weightData.entries.length >= 2 && (
+          {weightData && (weightData.entries.length >= 2 || profile.birth_weight) && (
             <>
-              <Rule label="MASS · GROWTH" accent={BR.rose} />
+              <Rule label="MASS · WHO NORMS" accent={BR.rose} />
               <ChartArea>
-                <WeightChart entries={weightData.entries} />
+                <WeightChart
+                  entries={weightData.entries}
+                  birthDate={profile.birth_date}
+                  birthWeight={profile.birth_weight}
+                  sex={profile.sex}
+                />
               </ChartArea>
             </>
           )}

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useProfile, formatAge } from '../hooks/useProfile'
+import type { BabySex } from '../hooks/useProfile'
 import { BR } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { Rule } from '../components/br/Rule'
@@ -16,12 +17,14 @@ function ProfilePage() {
   const [name, setName] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [birthWeight, setBirthWeight] = useState('')
+  const [sex, setSex] = useState<BabySex | ''>('')
 
   useEffect(() => {
     if (isLoaded) {
       setName(profile.baby_name ?? '')
       setBirthDate(profile.birth_date ?? '')
       setBirthWeight(profile.birth_weight ? String(profile.birth_weight) : '')
+      setSex(profile.sex ?? '')
     }
   }, [isLoaded, profile])
 
@@ -30,6 +33,7 @@ function ProfilePage() {
       baby_name: name.trim() || null,
       birth_date: birthDate || null,
       birth_weight: birthWeight ? parseInt(birthWeight, 10) : null,
+      sex: sex || null,
     })
     navigate({ to: '/' })
   }
@@ -196,6 +200,41 @@ function ProfilePage() {
               › {(parseInt(birthWeight, 10) / 1000).toFixed(2)} kg
             </p>
           )}
+        </div>
+
+        <div>
+          <label style={labelStyle}>[ Пол · SEX ]</label>
+          <div className="flex gap-2">
+            {(
+              [
+                ['boy', 'Мальчик · BOY', BR.cyan],
+                ['girl', 'Девочка · GIRL', BR.rose],
+              ] as const
+            ).map(([value, label, accent]) => {
+              const on = sex === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setSex(sex === value ? '' : value)}
+                  className="flex-1 uppercase"
+                  style={{
+                    fontFamily: BR.mono,
+                    fontSize: 10,
+                    letterSpacing: 2,
+                    color: on ? accent : BR.dim,
+                    padding: '12px 10px',
+                    border: `1px solid ${on ? accent : BR.line}`,
+                    background: on ? `${accent}14` : 'transparent',
+                    textShadow: on ? `0 0 8px ${accent}88` : 'none',
+                    minHeight: 44,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <button

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -5,6 +7,7 @@ class SettingsUpdate(BaseModel):
     baby_name: str | None = None
     birth_date: str | None = None  # YYYY-MM-DD
     birth_weight: int | None = Field(default=None, ge=200, le=10000)  # grams
+    sex: Literal["boy", "girl"] | None = None
 
     @field_validator("birth_date")
     @classmethod
@@ -22,3 +25,4 @@ class SettingsResponse(BaseModel):
     baby_name: str | None = None
     birth_date: str | None = None
     birth_weight: int | None = None
+    sex: Literal["boy", "girl"] | None = None
