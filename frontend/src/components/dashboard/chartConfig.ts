@@ -1,25 +1,33 @@
 import type { ChartOptions } from 'chart.js'
 import { MONTH_SHORT_RU } from './utils'
 
+// Blade Runner neo-noir palette — amber primary, cyan secondary, rose accent.
 export const COLORS = {
-  blue400: '#60a5fa',
-  purple400: '#c084fc',
-  sky400: '#38bdf8',
-  amber400: '#fbbf24',
-  amber500: '#f59e0b',
-  pink400: '#f472b6',
-  green400: '#4ade80',
-  blue300alpha: 'rgba(147, 197, 253, 0.5)',
-  amber300alpha: 'rgba(252, 211, 77, 0.5)',
-  pink300alpha: 'rgba(249, 168, 212, 0.5)',
-  green300alpha: 'rgba(134, 239, 172, 0.5)',
-  blue600: '#2563eb',
-  amber600: '#d97706',
-  pink600: '#db2777',
-  green600: '#16a34a',
-  teal500: '#14b8a6',
-  teal300alpha: 'rgba(94, 234, 212, 0.5)',
-  teal600: '#0d9488',
+  blue400: '#64f0e8', // cyan
+  purple400: '#d7a85c',
+  sky400: '#64f0e8',
+  amber400: '#ffb347',
+  amber500: '#d7a85c',
+  pink400: '#ff9ea3',
+  green400: '#b8946a',
+  blue300alpha: 'rgba(100, 240, 232, 0.35)',
+  amber300alpha: 'rgba(255, 179, 71, 0.35)',
+  pink300alpha: 'rgba(255, 158, 163, 0.35)',
+  green300alpha: 'rgba(184, 148, 106, 0.35)',
+  blue600: '#64f0e8',
+  amber600: '#ffb347',
+  pink600: '#ff9ea3',
+  green600: '#b8946a',
+  teal500: '#64f0e8',
+  teal300alpha: 'rgba(100, 240, 232, 0.35)',
+  teal600: '#64f0e8',
+}
+
+const GRID = 'rgba(215,170,110,0.14)'
+const TICK = '#f0e3cc'
+const TICK_FONT = {
+  family: '"JetBrains Mono", ui-monospace, monospace',
+  size: 10,
 }
 
 export function formatDateTickRu(dateStr: string): string {
@@ -39,7 +47,16 @@ export function baseBarOptions(): ChartOptions<'bar'> {
     },
     plugins: {
       legend: { display: false },
-      tooltip: { enabled: true },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(11, 15, 18, 0.95)',
+        borderColor: 'rgba(255, 179, 71, 0.4)',
+        borderWidth: 1,
+        titleColor: '#ffb347',
+        bodyColor: '#f0e3cc',
+        titleFont: TICK_FONT,
+        bodyFont: TICK_FONT,
+      },
       datalabels: { display: false },
     },
     scales: {
@@ -49,16 +66,16 @@ export function baseBarOptions(): ChartOptions<'bar'> {
           autoSkip: true,
           autoSkipPadding: 8,
           maxRotation: 0,
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: 'rgba(215,200,180,0.55)',
         },
       },
       y: {
         beginAtZero: true,
-        grid: { color: '#f3f4f6' },
+        grid: { color: GRID },
         ticks: {
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: 'rgba(215,200,180,0.55)',
         },
       },
     },
@@ -77,7 +94,16 @@ export function baseLineOptions(): ChartOptions<'line'> {
     },
     plugins: {
       legend: { display: false },
-      tooltip: { enabled: true },
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(11, 15, 18, 0.95)',
+        borderColor: 'rgba(255, 179, 71, 0.4)',
+        borderWidth: 1,
+        titleColor: '#ffb347',
+        bodyColor: '#f0e3cc',
+        titleFont: TICK_FONT,
+        bodyFont: TICK_FONT,
+      },
       datalabels: { display: false },
     },
     scales: {
@@ -87,18 +113,20 @@ export function baseLineOptions(): ChartOptions<'line'> {
           autoSkip: true,
           autoSkipPadding: 8,
           maxRotation: 0,
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: 'rgba(215,200,180,0.55)',
         },
       },
       y: {
         beginAtZero: true,
-        grid: { color: '#f3f4f6' },
+        grid: { color: GRID },
         ticks: {
-          font: { size: 10 },
-          color: '#9ca3af',
+          font: TICK_FONT,
+          color: 'rgba(215,200,180,0.55)',
         },
       },
     },
   }
 }
+
+export { TICK, GRID }

@@ -3,6 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { Entry, EntryType, Upload, UploadDetail } from '../types'
+import { BR, entryAccent } from '../components/br/theme'
+import { PageHead } from '../components/br/PageHead'
+import { Rule } from '../components/br/Rule'
+import { GlyphDot } from '../components/br/GlyphDot'
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '')
 
@@ -18,37 +22,18 @@ export const Route = createFileRoute('/review')({
 })
 
 const TYPE_LABELS: Record<EntryType, string> = {
-  feeding: 'Feeding',
-  diaper: 'Diaper',
-  weight: 'Weight',
-}
-
-const SUBTYPE_ICONS: Record<string, string> = {
-  breast: '\u{1F930}',
-  formula: '\u{1F37C}',
-  pee: '\u{1F4A7}',
-  poo: '\u{1F4A9}',
-  dry: '\u{2705}',
-  'pee+poo': '\u{1F4A7}\u{1F4A9}',
-}
-
-function getEntryIcon(entryType: string, subtype: string | null): string {
-  if (subtype && SUBTYPE_ICONS[subtype]) {
-    return SUBTYPE_ICONS[subtype]
-  }
-  if (entryType === 'weight') return '\u{2696}\u{FE0F}'
-  if (entryType === 'feeding') return '\u{1F37C}'
-  if (entryType === 'diaper') return '\u{1FA7B}'
-  return ''
+  feeding: 'FEEDING',
+  diaper: 'DIAPER',
+  weight: 'WEIGHT',
 }
 
 const FEEDING_SUBTYPES = ['breast', 'formula'] as const
 const DIAPER_SUBTYPES = ['pee', 'poo', 'dry', 'pee+poo'] as const
 
-const CONFIDENCE_STYLES: Record<string, string> = {
-  high: 'border-l-4 border-l-transparent',
-  medium: 'border-l-4 border-l-amber-400',
-  low: 'border-l-4 border-l-red-400',
+const CONFIDENCE_COLOR: Record<string, string> = {
+  high: BR.amber,
+  medium: '#d7a85c',
+  low: BR.blood,
 }
 
 function ReviewPage() {
@@ -116,11 +101,9 @@ function ReviewPage() {
   })
 
   const doneUploads = (uploadsQuery.data?.uploads ?? []).filter((u) => u.status === 'done')
-
   const detail = detailQuery.data
   const entries = detail?.entries ?? []
 
-  // Group entries by date
   const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
     const d = entry.date
     if (!acc[d]) acc[d] = []
@@ -130,79 +113,195 @@ function ReviewPage() {
 
   const showSplitView = uploadId && detail?.status === 'done'
 
+  const confCounts = entries.reduce(
+    (acc, e) => {
+      const c = e.confidence ?? 'high'
+      acc[c] = (acc[c] ?? 0) + 1
+      return acc
+    },
+    {} as Record<string, number>,
+  )
+  const lowCount = confCounts.low ?? 0
+  const flagStr = lowCount > 0 ? `${lowCount} FLAG` : '0 FLAGS'
+
+  const currentUpload = detail ? doneUploads.find((u) => u.id === uploadId) : null
+
   return (
-    <div className={showSplitView ? 'flex flex-col h-[calc(100vh-theme(spacing.16))]' : 'p-4'}>
-      {/* Upload selector */}
-      <div className={showSplitView ? 'p-4 pb-2 shrink-0' : ''}>
-        {!showSplitView && <h1 className="text-xl font-bold mb-4">Review</h1>}
-        <select
-          className="w-full p-2 border border-gray-300 rounded-lg bg-white"
-          value={uploadId ?? ''}
-          onChange={(e) => {
-            const val = e.target.value
-            navigate({
-              to: '/review',
-              search: val ? { uploadId: Number(val) } : {},
-            })
+    <>
+      <PageHead
+        kicker="AUDIT · PARSE vs SOURCE"
+        title={
+          <>
+            Сверка<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
+          </>
+        }
+        meta={[
+          currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD'),
+          `${entries.length} RECORDS`,
+          flagStr,
+        ]}
+      />
+
+      <div className="px-5">
+        <div
+          className="flex items-center gap-2"
+          style={{
+            padding: '10px 12px',
+            border: `1px solid ${BR.line}`,
+            background: BR.char,
           }}
         >
-          <option value="">Select an upload...</option>
-          {doneUploads.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.filename} ({u.entry_count ?? 0} entries)
-            </option>
-          ))}
-        </select>
+          <span
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 10,
+              letterSpacing: 2,
+              color: BR.amber,
+            }}
+          >
+            SRC
+          </span>
+          <select
+            value={uploadId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value
+              navigate({
+                to: '/review',
+                search: val ? { uploadId: Number(val) } : {},
+              })
+            }}
+            className="flex-1"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 12,
+              color: BR.text,
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              letterSpacing: 0.5,
+            }}
+          >
+            <option value="">— select an upload —</option>
+            {doneUploads.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.filename} ({u.entry_count ?? 0})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {!uploadId && (
-        <p className="text-gray-400 text-center mt-8">Select an upload to review its entries</p>
+        <p
+          className="text-center mt-8 uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          Select an upload to review
+        </p>
       )}
 
       {uploadId && detail?.status === 'processing' && (
-        <p className="text-blue-600 text-center mt-8">Processing...</p>
+        <p
+          className="text-center mt-8 uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2.5,
+            color: BR.cyan,
+            textShadow: `0 0 8px ${BR.cyanGlow}`,
+          }}
+        >
+          ▓▓▓▓░░░ SCANNING…
+        </p>
       )}
 
       {uploadId && detail?.status === 'pending' && (
-        <p className="text-yellow-600 text-center mt-8">Waiting to process...</p>
+        <p
+          className="text-center mt-8 uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          ░░░ QUEUED
+        </p>
       )}
 
       {uploadId && detail?.status === 'failed' && (
-        <p className="text-red-600 text-center mt-8">Failed: {detail.error_message}</p>
+        <p
+          className="text-center mt-8 uppercase px-5"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 1.5,
+            color: BR.blood,
+          }}
+        >
+          [ERR] {detail.error_message}
+        </p>
       )}
 
-      {/* Split-screen layout */}
       {showSplitView && (
         <>
-          {/* Top panel: Image with pinch-to-zoom */}
-          <PinchZoomImage src={`${BASE_PATH}/api/uploads/${uploadId}/image`} alt="Uploaded log" />
-
-          {/* Divider */}
-          <div className="h-px bg-gray-300 shrink-0" />
-
-          {/* Bottom panel: Entries */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 pt-2">
-            {/* Confidence legend */}
-            <div className="flex gap-4 mb-3 text-xs text-gray-500">
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded border-l-4 border-l-transparent bg-gray-100" />
-                High
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded border-l-4 border-l-amber-400 bg-gray-100" />
-                Medium
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded border-l-4 border-l-red-400 bg-gray-100" />
-                Low
-              </span>
+          <div className="px-5 mt-3">
+            <PinchZoomImage src={`${BASE_PATH}/api/uploads/${uploadId}/image`} alt="Uploaded log" />
+            <div
+              className="flex justify-between items-center mt-2 uppercase"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 9,
+                letterSpacing: 1.8,
+                color: BR.dim,
+              }}
+            >
+              <span>SOURCE · {currentUpload?.filename ?? `#${uploadId}`}</span>
+              <span style={{ color: BR.amber }}>[ pinch · zoom ]</span>
             </div>
+          </div>
 
-            {/* Entries grouped by date */}
-            {Object.entries(grouped).map(([date, dayEntries]) => (
-              <div key={date} className="mb-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">{date}</h3>
-                <div className="space-y-2">
+          <Rule label={`EXTRACTED · ${entries.length} OF ${entries.length}`} />
+
+          {/* Confidence strip */}
+          <div className="px-5 flex gap-2.5 mb-2">
+            {(['high', 'medium', 'low'] as const).map((c) => {
+              const color = CONFIDENCE_COLOR[c]
+              const count = confCounts[c] ?? 0
+              return (
+                <div
+                  key={c}
+                  className="flex-1 flex justify-between uppercase"
+                  style={{
+                    fontFamily: BR.mono,
+                    fontSize: 10,
+                    letterSpacing: 1.5,
+                    color,
+                    padding: '8px 10px',
+                    border: `1px solid ${color}`,
+                    boxShadow: c === 'low' && count > 0 ? `0 0 12px ${color}45` : 'none',
+                  }}
+                >
+                  <span>{c.toUpperCase().slice(0, 4)}</span>
+                  <span>{count}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="px-5">
+            <div style={{ border: `1px solid ${BR.line}`, background: BR.char }}>
+              {Object.entries(grouped).map(([date, dayEntries]) => (
+                <div key={date}>
+                  <div
+                    className="uppercase"
+                    style={{
+                      padding: '8px 14px',
+                      fontFamily: BR.mono,
+                      fontSize: 9,
+                      letterSpacing: 2.5,
+                      color: BR.dim,
+                      borderBottom: `1px dashed ${BR.line}`,
+                      background: 'rgba(255,179,71,0.04)',
+                    }}
+                  >
+                    ░ {date}
+                  </div>
                   {dayEntries.map((entry) => (
                     <EntryCard
                       key={entry.id}
@@ -229,14 +328,20 @@ function ReviewPage() {
                     />
                   ))}
                 </div>
-              </div>
-            ))}
+              ))}
+              {entries.length === 0 && (
+                <p
+                  className="text-center py-4 uppercase"
+                  style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+                >
+                  no entries
+                </p>
+              )}
+            </div>
+          </div>
 
-            {entries.length === 0 && (
-              <p className="text-gray-400 text-center mt-4">No entries found</p>
-            )}
-
-            {/* Add missing entry */}
+          {/* Add missing */}
+          <div className="px-5 mt-3 pb-6">
             {isAdding ? (
               <AddEntryForm
                 defaultDate={entries.length > 0 ? entries[entries.length - 1].date : ''}
@@ -247,20 +352,54 @@ function ReviewPage() {
               />
             ) : (
               <button
-                className="w-full mt-4 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 text-sm min-h-[44px] active:bg-gray-50"
+                className="w-full uppercase"
                 onClick={() => {
                   setIsAdding(true)
                   setEditingId(null)
                 }}
+                style={{
+                  padding: '12px',
+                  border: `1px dashed ${BR.amber}`,
+                  color: BR.amber,
+                  fontFamily: BR.mono,
+                  fontSize: 11,
+                  letterSpacing: 2,
+                  background: 'rgba(255,179,71,0.02)',
+                  minHeight: 44,
+                }}
               >
-                + Add missing entry
+                ＋ ADD MISSING ENTRY
               </button>
             )}
           </div>
         </>
       )}
-    </div>
+    </>
   )
+}
+
+function formatLabel(entryType: string, subtype: string | null): string {
+  if (entryType === 'feeding') {
+    if (subtype === 'breast') return 'BREAST'
+    if (subtype === 'formula') return 'FORMULA'
+    return 'FEEDING'
+  }
+  if (entryType === 'diaper') {
+    if (subtype === 'pee') return 'WET'
+    if (subtype === 'poo') return 'SOILED'
+    if (subtype === 'pee+poo') return 'WET+SOILED'
+    if (subtype === 'dry') return 'DRY'
+    return 'DIAPER'
+  }
+  if (entryType === 'weight') return 'MASS'
+  return entryType.toUpperCase()
+}
+
+function formatValue(entry: Entry): string {
+  if (entry.value == null) return ''
+  if (entry.entry_type === 'weight') return `${entry.value} g`
+  if (entry.entry_type === 'feeding') return `${entry.value} ml`
+  return String(entry.value)
 }
 
 function EntryCard({
@@ -294,16 +433,35 @@ function EntryCard({
   const [editValue, setEditValue] = useState(entry.value?.toString() ?? '')
   const [editNotes, setEditNotes] = useState(entry.notes ?? '')
 
-  const confidenceStyle = CONFIDENCE_STYLES[entry.confidence ?? 'high'] ?? CONFIDENCE_STYLES.high
+  const confColor = CONFIDENCE_COLOR[entry.confidence ?? 'high']
+  const accent = entryAccent(entry.entry_type, entry.subtype)
+  const time = entry.occurred_at.split(' ')[1]?.slice(0, 5) ?? ''
+  const valueStr = formatValue(entry)
 
-  const cardBg = entry.confirmed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+  const inputStyle: React.CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 14,
+    color: BR.text,
+    background: BR.char,
+    border: `1px solid ${BR.line}`,
+    padding: '8px 10px',
+    minHeight: 40,
+    width: '100%',
+  }
 
   if (isEditing) {
     return (
-      <div className={`bg-white rounded-lg border border-blue-300 p-3 ${confidenceStyle}`}>
+      <div
+        style={{
+          padding: 12,
+          borderBottom: `1px dashed ${BR.line}`,
+          background: 'rgba(255,179,71,0.04)',
+          borderLeft: `2px solid ${BR.amber}`,
+        }}
+      >
         <div className="grid grid-cols-3 gap-2 mb-2">
           <select
-            className="p-1 border rounded text-sm"
+            style={inputStyle}
             value={editType}
             onChange={(e) => {
               const newType = e.target.value as EntryType
@@ -321,7 +479,7 @@ function EntryCard({
           </select>
           {editType === 'feeding' && (
             <select
-              className="p-1 border rounded text-sm"
+              style={inputStyle}
               value={editSubtype}
               onChange={(e) => setEditSubtype(e.target.value)}
             >
@@ -334,7 +492,7 @@ function EntryCard({
           )}
           {editType === 'diaper' && (
             <select
-              className="p-1 border rounded text-sm"
+              style={inputStyle}
               value={editSubtype}
               onChange={(e) => setEditSubtype(e.target.value)}
             >
@@ -347,7 +505,7 @@ function EntryCard({
           )}
           <input
             type="text"
-            className="p-1 border rounded text-sm"
+            style={inputStyle}
             value={editTime}
             onChange={(e) => setEditTime(e.target.value)}
             placeholder="YYYY-MM-DD HH:MM"
@@ -356,22 +514,21 @@ function EntryCard({
         <div className="grid grid-cols-2 gap-2 mb-2">
           <input
             type="number"
-            className="p-1 border rounded text-sm"
+            style={inputStyle}
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
-            placeholder="Value"
+            placeholder="value"
           />
           <input
             type="text"
-            className="p-1 border rounded text-sm"
+            style={inputStyle}
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
-            placeholder="Notes"
+            placeholder="notes"
           />
         </div>
         <div className="flex gap-2">
           <button
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded"
             disabled={isSaving}
             onClick={() =>
               onSave({
@@ -382,66 +539,160 @@ function EntryCard({
                 notes: editNotes || null,
               })
             }
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 10,
+              letterSpacing: 2,
+              padding: '6px 12px',
+              color: BR.amber,
+              border: `1px solid ${BR.amber}`,
+              background: 'rgba(255,179,71,0.1)',
+            }}
           >
-            Save
+            SAVE
           </button>
-          <button className="px-3 py-1 text-xs bg-gray-200 rounded" onClick={onCancel}>
-            Cancel
+          <button
+            onClick={onCancel}
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 10,
+              letterSpacing: 2,
+              padding: '6px 12px',
+              color: BR.dim,
+              border: `1px solid ${BR.line}`,
+            }}
+          >
+            CANCEL
           </button>
         </div>
       </div>
     )
   }
 
-  const time = entry.occurred_at.split(' ')[1] ?? ''
-  const icon = getEntryIcon(entry.entry_type, entry.subtype)
-
   return (
-    <div className={`rounded-lg border p-3 ${cardBg} ${confidenceStyle}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm text-gray-400 w-12 shrink-0">{time}</span>
-          <span className="text-base">{icon}</span>
-          <span className="text-sm font-medium">
-            {TYPE_LABELS[entry.entry_type] ?? entry.entry_type}
-          </span>
-          {entry.value != null && (
-            <span className="text-sm text-gray-600">
-              {entry.entry_type === 'weight' ? `${entry.value}g` : `${entry.value}ml`}
-            </span>
-          )}
-          {entry.notes && <span className="text-xs text-gray-400 truncate">{entry.notes}</span>}
-        </div>
-        <div className="flex gap-1 shrink-0">
-          {entry.confidence === 'low' && (
-            <span className="text-red-500 text-xs" title="Low confidence">
-              !!
-            </span>
-          )}
-          <button
-            className={`px-2 py-1 text-xs rounded ${
-              entry.confirmed
-                ? 'text-green-700 bg-green-100 hover:bg-green-200'
-                : 'text-gray-400 hover:text-green-600'
-            }`}
-            onClick={onConfirm}
-            title={entry.confirmed ? 'Unconfirm' : 'Confirm'}
-          >
-            {'\u2713'}
-          </button>
-          <button className="px-2 py-1 text-xs text-gray-500 hover:text-blue-600" onClick={onEdit}>
-            Edit
-          </button>
-          <button className="px-2 py-1 text-xs text-gray-500 hover:text-red-600" onClick={onDelete}>
-            Del
-          </button>
-        </div>
+    <div
+      className="grid items-center"
+      style={{
+        gridTemplateColumns: '48px 22px 1fr auto',
+        gap: 10,
+        padding: '10px 14px',
+        borderBottom: `1px dashed ${BR.line}`,
+        background: entry.confirmed ? 'rgba(255,179,71,0.04)' : 'transparent',
+        borderLeft: `2px solid ${entry.confirmed ? BR.amber : 'transparent'}`,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 11,
+          color: BR.text,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {time}
       </div>
-      {entry.raw_text && (
-        <p className="text-xs text-gray-400 mt-1 truncate" title={entry.raw_text}>
-          {entry.raw_text}
-        </p>
-      )}
+      <GlyphDot entryType={entry.entry_type} subtype={entry.subtype} size={18} />
+      <div className="min-w-0">
+        <div
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 9,
+            letterSpacing: 1.8,
+            color: accent,
+          }}
+        >
+          {formatLabel(entry.entry_type, entry.subtype)}
+        </div>
+        {valueStr && (
+          <div
+            style={{
+              fontFamily: BR.display,
+              fontSize: 13,
+              color: BR.text,
+              marginTop: 1,
+            }}
+          >
+            {valueStr}
+          </div>
+        )}
+        {entry.notes && (
+          <div
+            className="truncate"
+            title={entry.notes}
+            style={{
+              fontFamily: BR.serif,
+              fontStyle: 'italic',
+              fontSize: 12,
+              color: BR.dim,
+              marginTop: 1,
+            }}
+          >
+            «{entry.notes}»
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 8,
+            letterSpacing: 1.5,
+            color: confColor,
+            padding: '2px 6px',
+            border: `1px solid ${confColor}`,
+          }}
+        >
+          {(entry.confidence ?? 'high').slice(0, 3)}
+        </span>
+        <button
+          onClick={onConfirm}
+          className="uppercase"
+          title={entry.confirmed ? 'Unconfirm' : 'Confirm'}
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 9,
+            letterSpacing: 1.5,
+            padding: '3px 6px',
+            color: entry.confirmed ? BR.amber : BR.dim,
+            border: `1px solid ${entry.confirmed ? BR.amber : BR.line}`,
+            textShadow: entry.confirmed ? `0 0 6px ${BR.amberGlow}` : 'none',
+          }}
+        >
+          ✓
+        </button>
+        <button
+          onClick={onEdit}
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 9,
+            letterSpacing: 1.5,
+            padding: '3px 6px',
+            color: BR.dim,
+            border: `1px solid ${BR.line}`,
+          }}
+        >
+          EDIT
+        </button>
+        <button
+          onClick={onDelete}
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 9,
+            letterSpacing: 1.5,
+            padding: '3px 6px',
+            color: BR.blood,
+            border: `1px solid ${BR.blood}`,
+          }}
+        >
+          DEL
+        </button>
+      </div>
     </div>
   )
 }
@@ -476,12 +727,40 @@ function AddEntryForm({
 
   const occurredAt = date && time ? `${date} ${time}` : ''
 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 14,
+    color: BR.text,
+    background: BR.char,
+    border: `1px solid ${BR.line}`,
+    padding: '10px 12px',
+    minHeight: 44,
+    width: '100%',
+  }
+
   return (
-    <div className="mt-4 rounded-lg border-2 border-dashed border-green-300 bg-green-50/50 p-3">
-      <div className="text-xs font-medium text-green-700 mb-2">New entry</div>
+    <div
+      style={{
+        padding: 14,
+        border: `1px dashed ${BR.amber}`,
+        background: 'rgba(255,179,71,0.04)',
+      }}
+    >
+      <div
+        className="mb-2 uppercase"
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 10,
+          letterSpacing: 2.5,
+          color: BR.amber,
+          textShadow: `0 0 8px ${BR.amberGlow}`,
+        }}
+      >
+        [ NEW ENTRY ]
+      </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
         <select
-          className="p-1 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={type}
           onChange={(e) => {
             const newType = e.target.value as EntryType
@@ -498,11 +777,7 @@ function AddEntryForm({
           ))}
         </select>
         {type === 'feeding' && (
-          <select
-            className="p-1 border rounded text-base min-h-[44px]"
-            value={subtype}
-            onChange={(e) => setSubtype(e.target.value)}
-          >
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {FEEDING_SUBTYPES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -511,11 +786,7 @@ function AddEntryForm({
           </select>
         )}
         {type === 'diaper' && (
-          <select
-            className="p-1 border rounded text-base min-h-[44px]"
-            value={subtype}
-            onChange={(e) => setSubtype(e.target.value)}
-          >
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {DIAPER_SUBTYPES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -527,14 +798,14 @@ function AddEntryForm({
       <div className="grid grid-cols-2 gap-2 mb-2">
         <input
           type="date"
-          className="p-1 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
         <input
           ref={timeRef}
           type="time"
-          className="p-1 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={time}
           onChange={(e) => setTime(e.target.value)}
           autoFocus
@@ -543,22 +814,21 @@ function AddEntryForm({
       <div className="grid grid-cols-2 gap-2 mb-2">
         <input
           type="number"
-          className="p-1 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Value"
+          placeholder="value"
         />
         <input
           type="text"
-          className="p-1 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notes"
+          placeholder="notes"
         />
       </div>
       <div className="flex gap-2">
         <button
-          className="px-3 py-1 text-sm bg-green-600 text-white rounded min-h-[44px] disabled:opacity-50"
           disabled={!occurredAt || isSaving}
           onClick={() =>
             onSave({
@@ -570,11 +840,36 @@ function AddEntryForm({
               upload_id: uploadId,
             })
           }
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            padding: '10px 12px',
+            color: BR.amber,
+            border: `1px solid ${BR.amber}`,
+            background: 'rgba(255,179,71,0.12)',
+            textShadow: `0 0 10px ${BR.amberGlow}`,
+            minHeight: 44,
+            opacity: !occurredAt || isSaving ? 0.5 : 1,
+          }}
         >
-          Add Entry
+          [ ADD ]
         </button>
-        <button className="px-3 py-1 text-sm bg-gray-200 rounded min-h-[44px]" onClick={onCancel}>
-          Cancel
+        <button
+          onClick={onCancel}
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            padding: '10px 12px',
+            color: BR.dim,
+            border: `1px solid ${BR.line}`,
+            minHeight: 44,
+          }}
+        >
+          CANCEL
         </button>
       </div>
     </div>
@@ -668,29 +963,44 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div
       ref={containerRef}
-      className={`flex-1 min-h-0 ${scale > 1 ? 'overflow-hidden' : 'overflow-auto'} p-4 pt-2 relative`}
+      className={`relative ${scale > 1 ? 'overflow-hidden' : 'overflow-auto'}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
-      style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
+      style={{
+        touchAction: scale > 1 ? 'none' : 'pan-y',
+        border: `1px solid ${BR.line}`,
+        background: BR.char2,
+        padding: 4,
+      }}
     >
       <img
         src={src}
         alt={alt}
-        className="w-full rounded-lg border border-gray-200"
+        className="w-full"
         draggable={false}
         style={{
           transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
           transformOrigin: 'center center',
           transition: gestureRef.current ? 'none' : 'transform 0.2s ease-out',
+          filter: 'brightness(0.92) contrast(1.05)',
         }}
       />
       {scale > 1 && (
         <button
-          className="absolute top-3 right-5 bg-black/50 text-white text-xs px-2 py-1 rounded"
+          className="absolute top-2 right-2 uppercase"
           onClick={resetZoom}
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 10,
+            letterSpacing: 2,
+            color: BR.amber,
+            padding: '4px 8px',
+            border: `1px solid ${BR.amber}`,
+            background: 'rgba(6,8,10,0.7)',
+          }}
         >
-          Reset zoom
+          RESET
         </button>
       )}
     </div>
