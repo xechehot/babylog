@@ -127,254 +127,281 @@ function ReviewPage() {
   const currentUpload = detail ? doneUploads.find((u) => u.id === uploadId) : null
 
   return (
-    <>
-      <PageHead
-        kicker="AUDIT · PARSE vs SOURCE"
-        title={
-          <>
-            Сверка<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
-          </>
-        }
-        meta={[
-          currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD'),
-          `${entries.length} RECORDS`,
-          flagStr,
-        ]}
-      />
+    <div
+      className="flex flex-col"
+      style={{
+        // TopBar (~49px) + pb-20 on outlet wrapper (80px) = ~129px; buffer to 140px
+        height: 'calc(100dvh - 140px)',
+      }}
+    >
+      <div className="shrink-0">
+        <PageHead
+          kicker="AUDIT · PARSE vs SOURCE"
+          title={
+            <>
+              Сверка<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
+            </>
+          }
+          meta={[
+            currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD'),
+            `${entries.length} RECORDS`,
+            flagStr,
+          ]}
+        />
 
-      <div className="px-5">
-        <div
-          className="flex items-center gap-2"
-          style={{
-            padding: '10px 12px',
-            border: `1px solid ${BR.line}`,
-            background: BR.char,
-          }}
-        >
-          <span
+        <div className="px-5">
+          <div
+            className="flex items-center gap-2"
             style={{
-              fontFamily: BR.mono,
-              fontSize: 10,
-              letterSpacing: 2,
-              color: BR.amber,
+              padding: '10px 12px',
+              border: `1px solid ${BR.line}`,
+              background: BR.char,
             }}
           >
-            SRC
-          </span>
-          <select
-            value={uploadId ?? ''}
-            onChange={(e) => {
-              const val = e.target.value
-              navigate({
-                to: '/review',
-                search: val ? { uploadId: Number(val) } : {},
-              })
-            }}
-            className="flex-1"
-            style={{
-              fontFamily: BR.mono,
-              fontSize: 12,
-              color: BR.text,
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              letterSpacing: 0.5,
-            }}
-          >
-            <option value="">— select an upload —</option>
-            {doneUploads.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.filename} ({u.entry_count ?? 0})
-              </option>
-            ))}
-          </select>
+            <span
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 10,
+                letterSpacing: 2,
+                color: BR.amber,
+              }}
+            >
+              SRC
+            </span>
+            <select
+              value={uploadId ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                navigate({
+                  to: '/review',
+                  search: val ? { uploadId: Number(val) } : {},
+                })
+              }}
+              className="flex-1"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 12,
+                color: BR.text,
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                letterSpacing: 0.5,
+              }}
+            >
+              <option value="">— select an upload —</option>
+              {doneUploads.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.filename} ({u.entry_count ?? 0})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {!uploadId && (
-        <p
-          className="text-center mt-8 uppercase"
-          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
-        >
-          Select an upload to review
-        </p>
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p
+            className="uppercase"
+            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+          >
+            Select an upload to review
+          </p>
+        </div>
       )}
 
       {uploadId && detail?.status === 'processing' && (
-        <p
-          className="text-center mt-8 uppercase"
-          style={{
-            fontFamily: BR.mono,
-            fontSize: 11,
-            letterSpacing: 2.5,
-            color: BR.cyan,
-            textShadow: `0 0 8px ${BR.cyanGlow}`,
-          }}
-        >
-          ▓▓▓▓░░░ SCANNING…
-        </p>
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 11,
+              letterSpacing: 2.5,
+              color: BR.cyan,
+              textShadow: `0 0 8px ${BR.cyanGlow}`,
+            }}
+          >
+            ▓▓▓▓░░░ SCANNING…
+          </p>
+        </div>
       )}
 
       {uploadId && detail?.status === 'pending' && (
-        <p
-          className="text-center mt-8 uppercase"
-          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
-        >
-          ░░░ QUEUED
-        </p>
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p
+            className="uppercase"
+            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+          >
+            ░░░ QUEUED
+          </p>
+        </div>
       )}
 
       {uploadId && detail?.status === 'failed' && (
-        <p
-          className="text-center mt-8 uppercase px-5"
-          style={{
-            fontFamily: BR.mono,
-            fontSize: 11,
-            letterSpacing: 1.5,
-            color: BR.blood,
-          }}
-        >
-          [ERR] {detail.error_message}
-        </p>
+        <div className="flex-1 min-h-0 flex items-center justify-center px-5">
+          <p
+            className="text-center uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 11,
+              letterSpacing: 1.5,
+              color: BR.blood,
+            }}
+          >
+            [ERR] {detail.error_message}
+          </p>
+        </div>
       )}
 
       {showSplitView && (
         <>
-          <div className="px-5 mt-3">
-            <PinchZoomImage src={`${BASE_PATH}/api/uploads/${uploadId}/image`} alt="Uploaded log" />
-            <div
-              className="flex justify-between items-center mt-2 uppercase"
-              style={{
-                fontFamily: BR.mono,
-                fontSize: 9,
-                letterSpacing: 1.8,
-                color: BR.dim,
-              }}
-            >
-              <span>SOURCE · {currentUpload?.filename ?? `#${uploadId}`}</span>
-              <span style={{ color: BR.amber }}>[ pinch · zoom ]</span>
-            </div>
+          {/* Image source caption */}
+          <div
+            className="shrink-0 px-5 mt-2 flex justify-between items-center uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 9,
+              letterSpacing: 1.8,
+              color: BR.dim,
+            }}
+          >
+            <span>SOURCE · {currentUpload?.filename ?? `#${uploadId}`}</span>
+            <span style={{ color: BR.amber }}>[ pinch · zoom ]</span>
           </div>
 
-          <Rule label={`EXTRACTED · ${entries.length} OF ${entries.length}`} />
+          {/* Image pane — independently scrollable / zoomable */}
+          <PinchZoomImage
+            src={`${BASE_PATH}/api/uploads/${uploadId}/image`}
+            alt="Uploaded log"
+            className="flex-1 min-h-0 mx-5 mt-1.5"
+          />
 
-          {/* Confidence strip */}
-          <div className="px-5 flex gap-2.5 mb-2">
-            {(['high', 'medium', 'low'] as const).map((c) => {
-              const color = CONFIDENCE_COLOR[c]
-              const count = confCounts[c] ?? 0
-              return (
-                <div
-                  key={c}
-                  className="flex-1 flex justify-between uppercase"
-                  style={{
-                    fontFamily: BR.mono,
-                    fontSize: 10,
-                    letterSpacing: 1.5,
-                    color,
-                    padding: '8px 10px',
-                    border: `1px solid ${color}`,
-                    boxShadow: c === 'low' && count > 0 ? `0 0 12px ${color}45` : 'none',
-                  }}
-                >
-                  <span>{c.toUpperCase().slice(0, 4)}</span>
-                  <span>{count}</span>
-                </div>
-              )
-            })}
+          {/* Divider label — sits between the two scroll panes */}
+          <div className="shrink-0">
+            <Rule label={`EXTRACTED · ${entries.length}`} />
           </div>
 
-          <div className="px-5">
-            <div style={{ border: `1px solid ${BR.line}`, background: BR.char }}>
-              {Object.entries(grouped).map(([date, dayEntries]) => (
-                <div key={date}>
+          {/* Entries pane — independently scrollable */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* Confidence strip */}
+            <div className="px-5 flex gap-2.5 mb-2">
+              {(['high', 'medium', 'low'] as const).map((c) => {
+                const color = CONFIDENCE_COLOR[c]
+                const count = confCounts[c] ?? 0
+                return (
                   <div
-                    className="uppercase"
+                    key={c}
+                    className="flex-1 flex justify-between uppercase"
                     style={{
-                      padding: '8px 14px',
                       fontFamily: BR.mono,
-                      fontSize: 9,
-                      letterSpacing: 2.5,
-                      color: BR.dim,
-                      borderBottom: `1px dashed ${BR.line}`,
-                      background: 'rgba(255,179,71,0.04)',
+                      fontSize: 10,
+                      letterSpacing: 1.5,
+                      color,
+                      padding: '8px 10px',
+                      border: `1px solid ${color}`,
+                      boxShadow: c === 'low' && count > 0 ? `0 0 12px ${color}45` : 'none',
                     }}
                   >
-                    ░ {date}
+                    <span>{c.toUpperCase().slice(0, 4)}</span>
+                    <span>{count}</span>
                   </div>
-                  {dayEntries.map((entry) => (
-                    <EntryCard
-                      key={entry.id}
-                      entry={entry}
-                      isEditing={editingId === entry.id}
-                      onEdit={() => {
-                        setEditingId(entry.id)
-                        setIsAdding(false)
+                )
+              })}
+            </div>
+
+            <div className="px-5">
+              <div style={{ border: `1px solid ${BR.line}`, background: BR.char }}>
+                {Object.entries(grouped).map(([date, dayEntries]) => (
+                  <div key={date}>
+                    <div
+                      className="uppercase"
+                      style={{
+                        padding: '8px 14px',
+                        fontFamily: BR.mono,
+                        fontSize: 9,
+                        letterSpacing: 2.5,
+                        color: BR.dim,
+                        borderBottom: `1px dashed ${BR.line}`,
+                        background: 'rgba(255,179,71,0.04)',
                       }}
-                      onCancel={() => setEditingId(null)}
-                      onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
-                      onConfirm={() =>
-                        updateMutation.mutate({
-                          id: entry.id,
-                          confirmed: !entry.confirmed,
-                        })
-                      }
-                      onDelete={() => {
-                        if (confirm('Delete this entry?')) {
-                          deleteMutation.mutate(entry.id)
+                    >
+                      ░ {date}
+                    </div>
+                    {dayEntries.map((entry) => (
+                      <EntryCard
+                        key={entry.id}
+                        entry={entry}
+                        isEditing={editingId === entry.id}
+                        onEdit={() => {
+                          setEditingId(entry.id)
+                          setIsAdding(false)
+                        }}
+                        onCancel={() => setEditingId(null)}
+                        onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
+                        onConfirm={() =>
+                          updateMutation.mutate({
+                            id: entry.id,
+                            confirmed: !entry.confirmed,
+                          })
                         }
-                      }}
-                      isSaving={updateMutation.isPending}
-                    />
-                  ))}
-                </div>
-              ))}
-              {entries.length === 0 && (
-                <p
-                  className="text-center py-4 uppercase"
-                  style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+                        onDelete={() => {
+                          if (confirm('Delete this entry?')) {
+                            deleteMutation.mutate(entry.id)
+                          }
+                        }}
+                        isSaving={updateMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                ))}
+                {entries.length === 0 && (
+                  <p
+                    className="text-center py-4 uppercase"
+                    style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+                  >
+                    no entries
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Add missing */}
+            <div className="px-5 mt-3 pb-6">
+              {isAdding ? (
+                <AddEntryForm
+                  defaultDate={entries.length > 0 ? entries[entries.length - 1].date : ''}
+                  uploadId={uploadId!}
+                  isSaving={createMutation.isPending}
+                  onSave={(data) => createMutation.mutate(data)}
+                  onCancel={() => setIsAdding(false)}
+                />
+              ) : (
+                <button
+                  className="w-full uppercase"
+                  onClick={() => {
+                    setIsAdding(true)
+                    setEditingId(null)
+                  }}
+                  style={{
+                    padding: '12px',
+                    border: `1px dashed ${BR.amber}`,
+                    color: BR.amber,
+                    fontFamily: BR.mono,
+                    fontSize: 11,
+                    letterSpacing: 2,
+                    background: 'rgba(255,179,71,0.02)',
+                    minHeight: 44,
+                  }}
                 >
-                  no entries
-                </p>
+                  ＋ ADD MISSING ENTRY
+                </button>
               )}
             </div>
           </div>
-
-          {/* Add missing */}
-          <div className="px-5 mt-3 pb-6">
-            {isAdding ? (
-              <AddEntryForm
-                defaultDate={entries.length > 0 ? entries[entries.length - 1].date : ''}
-                uploadId={uploadId!}
-                isSaving={createMutation.isPending}
-                onSave={(data) => createMutation.mutate(data)}
-                onCancel={() => setIsAdding(false)}
-              />
-            ) : (
-              <button
-                className="w-full uppercase"
-                onClick={() => {
-                  setIsAdding(true)
-                  setEditingId(null)
-                }}
-                style={{
-                  padding: '12px',
-                  border: `1px dashed ${BR.amber}`,
-                  color: BR.amber,
-                  fontFamily: BR.mono,
-                  fontSize: 11,
-                  letterSpacing: 2,
-                  background: 'rgba(255,179,71,0.02)',
-                  minHeight: 44,
-                }}
-              >
-                ＋ ADD MISSING ENTRY
-              </button>
-            )}
-          </div>
         </>
       )}
-    </>
+    </div>
   )
 }
 
@@ -876,7 +903,15 @@ function AddEntryForm({
   )
 }
 
-function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
+function PinchZoomImage({
+  src,
+  alt,
+  className = '',
+}: {
+  src: string
+  alt: string
+  className?: string
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
@@ -963,7 +998,7 @@ function PinchZoomImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div
       ref={containerRef}
-      className={`relative ${scale > 1 ? 'overflow-hidden' : 'overflow-auto'}`}
+      className={`relative ${scale > 1 ? 'overflow-hidden' : 'overflow-auto'} ${className}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
