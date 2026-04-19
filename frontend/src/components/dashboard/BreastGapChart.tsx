@@ -69,6 +69,7 @@ export function BreastGapChart({ entries }: BreastGapChartProps) {
         pointBorderColor: BR_CHART.ink,
         pointBorderWidth: 1,
         datalabels: { display: false },
+        order: 1,
       },
       {
         label: 'MA',
@@ -80,6 +81,7 @@ export function BreastGapChart({ entries }: BreastGapChartProps) {
         tension: 0.2,
         fill: false,
         datalabels: { display: false },
+        order: 0,
       },
     ],
   }

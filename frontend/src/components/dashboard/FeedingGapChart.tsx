@@ -76,6 +76,7 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
         pointBorderColor: BR_CHART.ink,
         pointBorderWidth: 1,
         datalabels: { display: false },
+        order: 1,
       },
       {
         label: 'MA',
@@ -87,6 +88,7 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
         tension: 0.2,
         fill: false,
         datalabels: { display: false },
+        order: 0,
       },
     ],
   }

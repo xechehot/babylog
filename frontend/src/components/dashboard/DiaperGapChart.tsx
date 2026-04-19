@@ -73,6 +73,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
         pointBorderColor: BR_CHART.ink,
         pointBorderWidth: 1,
         datalabels: { display: false },
+        order: 1,
       },
       {
         label: 'MA',
@@ -84,6 +85,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
         tension: 0.2,
         fill: false,
         datalabels: { display: false },
+        order: 0,
       },
     ],
   }
