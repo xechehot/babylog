@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import type { TooltipItem } from 'chart.js'
 import type { Entry } from '../../types'
-import { baseLineOptions, formatDateTickRu, COLORS } from './chartConfig'
+import { baseLineOptions, formatDateTickRu, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
+import { LegendRow } from '../br/LegendRow'
 
 interface GapPoint {
   occurred_at: string
@@ -11,6 +13,7 @@ interface GapPoint {
 }
 
 const MOVING_AVG_WINDOW = 8
+const LONG_GAP_THRESHOLD = 3.5
 
 function computeGapPoints(entries: Entry[]): GapPoint[] {
   const feedings = entries
@@ -56,6 +59,10 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
 
   const labels = buildDeduplicatedLabels(points)
 
+  const pointColors = points.map((p) =>
+    p.gap > LONG_GAP_THRESHOLD ? BR_CHART.blood : BR_CHART.cyan,
+  )
+
   const chartData = {
     labels,
     datasets: [
@@ -63,18 +70,22 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
         label: 'ч',
         data: points.map((p) => p.gap),
         showLine: false,
-        pointRadius: 3,
-        pointBackgroundColor: COLORS.amber300alpha,
-        pointBorderColor: 'transparent',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
         datalabels: { display: false },
       },
       {
         label: 'MA',
         data: movingAvg,
         pointRadius: 0,
-        borderColor: COLORS.amber600,
-        borderWidth: 2,
+        borderColor: BR_CHART.amber,
+        borderDash: [4, 3],
+        borderWidth: 1.5,
         tension: 0.2,
+        fill: false,
         datalabels: { display: false },
       },
     ],
@@ -97,9 +108,22 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <ChartCard
+      kicker="SCATTER · INTERVAL"
+      title="Feeding gaps"
+      subtitle="интервал между кормлениями"
+      footer={
+        <LegendRow
+          items={[
+            { color: BR_CHART.cyan, label: `normal (<${LONG_GAP_THRESHOLD}ч)` },
+            { color: BR_CHART.blood, label: 'long gap' },
+            { color: BR_CHART.amber, line: true, label: 'moving avg' },
+          ]}
+        />
+      }
+    >
       <Line data={chartData} options={options} />
-    </div>
+    </ChartCard>
   )
 }
 

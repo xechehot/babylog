@@ -1,30 +1,50 @@
 import type { ChartOptions } from 'chart.js'
 import { MONTH_SHORT_RU } from './utils'
 
-// Blade Runner neo-noir palette — amber primary, cyan secondary, rose accent.
-export const COLORS = {
-  blue400: '#64f0e8', // cyan
-  purple400: '#d7a85c',
-  sky400: '#64f0e8',
-  amber400: '#ffb347',
-  amber500: '#d7a85c',
-  pink400: '#ff9ea3',
-  green400: '#b8946a',
-  blue300alpha: 'rgba(100, 240, 232, 0.35)',
-  amber300alpha: 'rgba(255, 179, 71, 0.35)',
-  pink300alpha: 'rgba(255, 158, 163, 0.35)',
-  green300alpha: 'rgba(184, 148, 106, 0.35)',
-  blue600: '#64f0e8',
-  amber600: '#ffb347',
-  pink600: '#ff9ea3',
-  green600: '#b8946a',
-  teal500: '#64f0e8',
-  teal300alpha: 'rgba(100, 240, 232, 0.35)',
-  teal600: '#64f0e8',
+// Blade Runner neo-noir Chart.js theme.
+// Series palette exported as BR_CHART so individual charts stay consistent.
+export const BR_CHART = {
+  amber: '#ffb347',
+  amberA: 'rgba(255,179,71,0.45)',
+  amberFill: 'rgba(255,179,71,0.18)',
+  cyan: '#64f0e8',
+  cyanA: 'rgba(100,240,232,0.45)',
+  cyanFill: 'rgba(100,240,232,0.18)',
+  rose: '#ff9ea3',
+  roseA: 'rgba(255,158,163,0.45)',
+  roseFill: 'rgba(255,158,163,0.18)',
+  stool: '#b8946a',
+  stoolFill: 'rgba(184,148,106,0.25)',
+  blood: '#ff4d4d',
+  body: '#f0e3cc',
+  dim: 'rgba(240,225,200,0.55)',
+  grid: 'rgba(215,170,110,0.10)',
+  gridStrong: 'rgba(215,170,110,0.22)',
+  ink: '#06080a',
 }
 
-const GRID = 'rgba(215,170,110,0.14)'
-const TICK = '#f0e3cc'
+// Back-compat COLORS — kept because individual charts still import these.
+export const COLORS = {
+  blue400: BR_CHART.cyan,
+  purple400: BR_CHART.rose,
+  sky400: BR_CHART.cyan,
+  amber400: BR_CHART.amber,
+  amber500: BR_CHART.stool,
+  pink400: BR_CHART.rose,
+  green400: BR_CHART.cyan,
+  blue300alpha: BR_CHART.cyanFill,
+  amber300alpha: BR_CHART.amberFill,
+  pink300alpha: BR_CHART.roseFill,
+  green300alpha: BR_CHART.cyanFill,
+  blue600: BR_CHART.cyan,
+  amber600: BR_CHART.amber,
+  pink600: BR_CHART.rose,
+  green600: BR_CHART.cyan,
+  teal500: BR_CHART.cyan,
+  teal300alpha: BR_CHART.cyanFill,
+  teal600: BR_CHART.cyan,
+}
+
 const TICK_FONT = {
   family: '"JetBrains Mono", ui-monospace, monospace',
   size: 10,
@@ -41,42 +61,41 @@ export function baseBarOptions(): ChartOptions<'bar'> {
     maintainAspectRatio: true,
     aspectRatio: 1.8,
     events: ['mousemove', 'mouseenter', 'touchstart', 'touchmove'],
-    interaction: {
-      mode: 'nearest',
-      intersect: false,
-    },
+    interaction: { mode: 'nearest', intersect: false },
     plugins: {
       legend: { display: false },
       tooltip: {
         enabled: true,
-        backgroundColor: 'rgba(11, 15, 18, 0.95)',
-        borderColor: 'rgba(255, 179, 71, 0.4)',
+        backgroundColor: 'rgba(6,8,10,0.92)',
+        borderColor: BR_CHART.amberA,
         borderWidth: 1,
-        titleColor: '#ffb347',
-        bodyColor: '#f0e3cc',
-        titleFont: TICK_FONT,
-        bodyFont: TICK_FONT,
+        titleFont: { ...TICK_FONT, weight: 500 },
+        titleColor: BR_CHART.amber,
+        bodyFont: { ...TICK_FONT, size: 11 },
+        bodyColor: BR_CHART.body,
+        padding: 10,
+        cornerRadius: 0,
+        displayColors: false,
       },
       datalabels: { display: false },
     },
     scales: {
       x: {
-        grid: { display: false },
+        grid: { display: false, color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: true },
         ticks: {
           autoSkip: true,
           autoSkipPadding: 8,
           maxRotation: 0,
           font: TICK_FONT,
-          color: 'rgba(215,200,180,0.55)',
+          color: BR_CHART.dim,
         },
       },
       y: {
         beginAtZero: true,
-        grid: { color: GRID },
-        ticks: {
-          font: TICK_FONT,
-          color: 'rgba(215,200,180,0.55)',
-        },
+        grid: { color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: false },
+        ticks: { font: TICK_FONT, color: BR_CHART.dim },
       },
     },
   }
@@ -88,45 +107,42 @@ export function baseLineOptions(): ChartOptions<'line'> {
     maintainAspectRatio: true,
     aspectRatio: 1.8,
     events: ['mousemove', 'mouseenter', 'touchstart', 'touchmove'],
-    interaction: {
-      mode: 'nearest',
-      intersect: false,
-    },
+    interaction: { mode: 'nearest', intersect: false },
     plugins: {
       legend: { display: false },
       tooltip: {
         enabled: true,
-        backgroundColor: 'rgba(11, 15, 18, 0.95)',
-        borderColor: 'rgba(255, 179, 71, 0.4)',
+        backgroundColor: 'rgba(6,8,10,0.92)',
+        borderColor: BR_CHART.amberA,
         borderWidth: 1,
-        titleColor: '#ffb347',
-        bodyColor: '#f0e3cc',
-        titleFont: TICK_FONT,
-        bodyFont: TICK_FONT,
+        titleFont: { ...TICK_FONT, weight: 500 },
+        titleColor: BR_CHART.amber,
+        bodyFont: { ...TICK_FONT, size: 11 },
+        bodyColor: BR_CHART.body,
+        padding: 10,
+        cornerRadius: 0,
+        displayColors: false,
       },
       datalabels: { display: false },
     },
     scales: {
       x: {
-        grid: { display: false },
+        grid: { display: false, color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: true },
         ticks: {
           autoSkip: true,
           autoSkipPadding: 8,
           maxRotation: 0,
           font: TICK_FONT,
-          color: 'rgba(215,200,180,0.55)',
+          color: BR_CHART.dim,
         },
       },
       y: {
         beginAtZero: true,
-        grid: { color: GRID },
-        ticks: {
-          font: TICK_FONT,
-          color: 'rgba(215,200,180,0.55)',
-        },
+        grid: { color: BR_CHART.grid },
+        border: { color: BR_CHART.gridStrong, display: false },
+        ticks: { font: TICK_FONT, color: BR_CHART.dim },
       },
     },
   }
 }
-
-export { TICK, GRID }

@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import type { TooltipItem } from 'chart.js'
 import type { Entry } from '../../types'
-import { baseLineOptions, formatDateTickRu, COLORS } from './chartConfig'
+import { baseLineOptions, formatDateTickRu, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
 
 interface WeightPoint {
   date: string
@@ -52,12 +53,14 @@ export function WeightChart({ entries }: WeightChartProps) {
       {
         label: 'Вес (г)',
         data: weights,
-        borderColor: COLORS.teal600,
-        backgroundColor: COLORS.teal300alpha,
-        borderWidth: 2,
+        borderColor: BR_CHART.rose,
+        backgroundColor: BR_CHART.roseFill,
+        borderWidth: 2.5,
         pointRadius: 4,
-        pointBackgroundColor: COLORS.teal500,
-        tension: 0.2,
+        pointBackgroundColor: BR_CHART.rose,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
+        tension: 0.25,
         fill: true,
         datalabels: { display: false },
       },
@@ -90,12 +93,14 @@ export function WeightChart({ entries }: WeightChartProps) {
       {
         label: 'Изменение (%)',
         data: pctChanges,
-        borderColor: COLORS.teal600,
-        backgroundColor: COLORS.teal300alpha,
-        borderWidth: 2,
+        borderColor: BR_CHART.amber,
+        backgroundColor: BR_CHART.amberFill,
+        borderWidth: 2.5,
         pointRadius: 4,
-        pointBackgroundColor: COLORS.teal500,
-        tension: 0.2,
+        pointBackgroundColor: BR_CHART.amber,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
+        tension: 0.25,
         fill: true,
         datalabels: { display: false },
       },
@@ -124,15 +129,17 @@ export function WeightChart({ entries }: WeightChartProps) {
 
   return (
     <>
-      <div className="bg-white rounded-lg border border-gray-200 p-3">
+      <ChartCard
+        kicker="LINE · ABSOLUTE"
+        title="Mass"
+        subtitle="граммы по дням"
+        accent={BR_CHART.rose}
+      >
         <Line data={absData} options={absOptions} />
-      </div>
-      <section>
-        <h2 className="text-sm font-medium text-gray-500 mb-2">Изменение веса (%)</h2>
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <Line data={pctData} options={pctOptions} />
-        </div>
-      </section>
+      </ChartCard>
+      <ChartCard kicker="LINE · DELTA" title="Change since first" subtitle="изменение (%)">
+        <Line data={pctData} options={pctOptions} />
+      </ChartCard>
     </>
   )
 }

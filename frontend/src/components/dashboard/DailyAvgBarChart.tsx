@@ -1,5 +1,5 @@
 import { Bar } from 'react-chartjs-2'
-import { baseBarOptions, formatDateTickRu } from './chartConfig'
+import { baseBarOptions, formatDateTickRu, BR_CHART } from './chartConfig'
 
 interface DailyValue {
   date: string
@@ -24,14 +24,17 @@ export function DailyAvgBarChart({
     datasets: [
       {
         data: data.map((d) => d.value),
-        backgroundColor: color,
-        borderRadius: 3,
+        backgroundColor: `${color}2d`,
+        borderColor: color,
+        borderWidth: 1.5,
+        borderRadius: 0,
+        borderSkipped: false,
         datalabels: {
           display: (ctx: { dataIndex: number }) => data[ctx.dataIndex].value > 0,
           anchor: 'end' as const,
           align: 'top' as const,
-          color: '#6b7280',
-          font: { size: 10 },
+          color,
+          font: { family: '"JetBrains Mono"', size: 9 },
           formatter: (v: number) => formatValue(v),
         },
       },
@@ -40,11 +43,18 @@ export function DailyAvgBarChart({
 
   const options = {
     ...baseBarOptions(),
-    layout: { padding: { top: 16 } },
+    layout: { padding: { top: 18 } },
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <div
+      className="relative"
+      style={{
+        border: `1px solid ${BR_CHART.gridStrong}`,
+        background: 'rgba(6,8,10,0.4)',
+        padding: 12,
+      }}
+    >
       <Bar data={chartData} options={options} />
     </div>
   )

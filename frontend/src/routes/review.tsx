@@ -36,6 +36,10 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   low: BR.blood,
 }
 
+const APPROVED_COLOR = '#7fe0a4'
+const APPROVED_BG = 'rgba(127,224,164,0.08)'
+const APPROVED_GLOW = 'rgba(127,224,164,0.55)'
+
 function ReviewPage() {
   const { uploadId } = Route.useSearch()
   const navigate = useNavigate()
@@ -598,6 +602,34 @@ function EntryCard({
     )
   }
 
+  const conf = entry.confidence ?? 'high'
+  let rowStyle: React.CSSProperties
+  if (entry.confirmed) {
+    rowStyle = {
+      borderLeft: `2px solid ${APPROVED_COLOR}`,
+      background: APPROVED_BG,
+      boxShadow: 'inset 0 0 22px rgba(127,224,164,0.08)',
+    }
+  } else if (conf === 'low') {
+    rowStyle = {
+      borderLeft: `2px solid ${BR.blood}`,
+      background: 'rgba(255,77,77,0.08)',
+      boxShadow: 'inset 0 0 20px rgba(255,77,77,0.06)',
+    }
+  } else if (conf === 'medium') {
+    rowStyle = {
+      borderLeft: '2px solid #d7a85c',
+      background: 'rgba(215,168,92,0.07)',
+      boxShadow: 'none',
+    }
+  } else {
+    rowStyle = {
+      borderLeft: '2px solid transparent',
+      background: 'transparent',
+      boxShadow: 'none',
+    }
+  }
+
   return (
     <div
       className="grid items-center"
@@ -606,8 +638,7 @@ function EntryCard({
         gap: 10,
         padding: '10px 14px',
         borderBottom: `1px dashed ${BR.line}`,
-        background: entry.confirmed ? 'rgba(255,179,71,0.04)' : 'transparent',
-        borderLeft: `2px solid ${entry.confirmed ? BR.amber : 'transparent'}`,
+        ...rowStyle,
       }}
     >
       <div
@@ -662,19 +693,37 @@ function EntryCard({
         )}
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
-        <span
-          className="uppercase"
-          style={{
-            fontFamily: BR.mono,
-            fontSize: 8,
-            letterSpacing: 1.5,
-            color: confColor,
-            padding: '2px 6px',
-            border: `1px solid ${confColor}`,
-          }}
-        >
-          {(entry.confidence ?? 'high').slice(0, 3)}
-        </span>
+        {entry.confirmed ? (
+          <span
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 8,
+              letterSpacing: 1.5,
+              color: APPROVED_COLOR,
+              padding: '2px 6px',
+              border: `1px solid ${APPROVED_COLOR}`,
+              background: APPROVED_BG,
+              textShadow: `0 0 6px ${APPROVED_GLOW}`,
+            }}
+          >
+            ✓ OK
+          </span>
+        ) : conf === 'low' || conf === 'medium' ? (
+          <span
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 8,
+              letterSpacing: 1.5,
+              color: confColor,
+              padding: '2px 6px',
+              border: `1px solid ${confColor}`,
+            }}
+          >
+            {conf.slice(0, 3)}
+          </span>
+        ) : null}
         <button
           onClick={onConfirm}
           className="uppercase"

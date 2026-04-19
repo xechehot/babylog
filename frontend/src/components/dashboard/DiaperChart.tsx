@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { Bar } from 'react-chartjs-2'
 import type { DashboardDay } from '../../types'
-import { baseBarOptions, formatDateTickRu, COLORS } from './chartConfig'
+import { baseBarOptions, formatDateTickRu, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
+import { LegendRow } from '../br/LegendRow'
 
 interface DiaperChartProps {
   days: DashboardDay[]
@@ -16,62 +18,67 @@ function dirtyCount(day: DashboardDay): number {
 }
 
 export function DiaperChart({ days }: DiaperChartProps) {
-  if (days.length === 0) return null
-
   const { chartData, options } = useMemo(() => {
     const data = {
       labels: days.map((d) => formatDateTickRu(d.date)),
       datasets: [
         {
-          label: 'Мокрые',
+          label: 'моча',
           data: days.map(wetCount),
-          backgroundColor: COLORS.sky400,
-          borderRadius: 2,
+          backgroundColor: BR_CHART.cyanFill,
+          borderColor: BR_CHART.cyan,
+          borderWidth: 1.5,
+          borderRadius: 0,
+          borderSkipped: false,
           datalabels: {
             display: (ctx: { dataIndex: number }) => wetCount(days[ctx.dataIndex]) > 0,
             anchor: 'end' as const,
             align: 'top' as const,
-            color: '#6b7280',
-            font: { size: 9 },
+            color: BR_CHART.cyan,
+            font: { family: '"JetBrains Mono"', size: 9 },
           },
         },
         {
-          label: 'Грязные',
+          label: 'стул',
           data: days.map(dirtyCount),
-          backgroundColor: COLORS.amber500,
-          borderRadius: 2,
+          backgroundColor: BR_CHART.stoolFill,
+          borderColor: BR_CHART.stool,
+          borderWidth: 1.5,
+          borderRadius: 0,
+          borderSkipped: false,
           datalabels: {
             display: (ctx: { dataIndex: number }) => dirtyCount(days[ctx.dataIndex]) > 0,
             anchor: 'end' as const,
             align: 'top' as const,
-            color: '#6b7280',
-            font: { size: 9 },
+            color: BR_CHART.stool,
+            font: { family: '"JetBrains Mono"', size: 9 },
           },
         },
       ],
     }
 
-    const opts = {
-      ...baseBarOptions(),
-      layout: { padding: { top: 16 } },
-    }
+    const opts = { ...baseBarOptions(), layout: { padding: { top: 18 } } }
 
     return { chartData: data, options: opts }
   }, [days])
 
+  if (days.length === 0) return null
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <div className="flex gap-4 mb-2 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-sky-400" />
-          Мокрые
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-amber-500" />
-          Грязные
-        </span>
-      </div>
+    <ChartCard
+      kicker="BAR · GROUPED"
+      title="Diapers / day"
+      subtitle="моча и стул"
+      footer={
+        <LegendRow
+          items={[
+            { color: BR_CHART.cyan, label: 'моча · pee' },
+            { color: BR_CHART.stool, label: 'стул · stool' },
+          ]}
+        />
+      }
+    >
       <Bar data={chartData} options={options} />
-    </div>
+    </ChartCard>
   )
 }

@@ -144,100 +144,93 @@ function DashboardPage() {
           <Rule label="TOTALS · ALL-TIME" accent={BR.cyan} />
           <AllTimeTotals totals={data.all_time_totals} />
 
-          <Rule label="INTAKE · MILLILITERS" />
-          <Section>{days.length > 0 ? <FeedingChart days={days} /> : <EmptyState />}</Section>
+          <Rule label="INTAKE · VOLUME" />
+          <ChartArea>{days.length > 0 ? <FeedingChart days={days} /> : <EmptyState />}</ChartArea>
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
-              <Rule label="FEEDING · HOURLY" accent={BR.rose} />
-              <Section>
+              <ChartArea>
                 <FeedingByHourChart entries={feedingData.entries} />
-              </Section>
+              </ChartArea>
+
+              <Rule label="INTAKE · VELOCITY + GAPS" />
+              <ChartArea>
+                <FeedingSpeedChart entries={feedingData.entries} />
+                <FeedingGapChart entries={feedingData.entries} />
+              </ChartArea>
 
               {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
                 <>
-                  <Rule label="AVG INTAKE · ML/H" accent={BR.cyan} />
-                  <Section>
+                  <SubKicker label="avg intake · мл/ч" accent={BR.cyan} />
+                  <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgFeedingSpeed(feedingData.entries)}
                       color={COLORS.blue400}
                       formatValue={(v) => Math.round(v).toString()}
                     />
-                  </Section>
+                  </ChartArea>
                 </>
               )}
 
               {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
                 <>
-                  <Rule label="FEEDING INTERVAL · H" />
-                  <Section>
+                  <SubKicker label="avg feeding interval · ч" />
+                  <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgFeedingInterval(feedingData.entries)}
                       color={COLORS.amber400}
                     />
-                  </Section>
+                  </ChartArea>
                 </>
               )}
 
-              <Rule label="INTAKE VELOCITY · ML/H" />
-              <Section>
-                <FeedingSpeedChart entries={feedingData.entries} />
-              </Section>
-
-              <Rule label="FEEDING GAPS · H" />
-              <Section>
-                <FeedingGapChart entries={feedingData.entries} />
-              </Section>
-
+              <Rule label="BREAST" accent={BR.rose} />
               {computeDailyAvgBreastInterval(feedingData.entries).length > 0 && (
                 <>
-                  <Rule label="BREAST INTERVAL · H" accent={BR.rose} />
-                  <Section>
+                  <SubKicker label="avg breast interval · ч" accent={BR.rose} />
+                  <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgBreastInterval(feedingData.entries)}
                       color={COLORS.pink400}
                     />
-                  </Section>
+                  </ChartArea>
                 </>
               )}
-
-              <Rule label="BREAST GAPS · H" accent={BR.rose} />
-              <Section>
+              <ChartArea>
                 <BreastGapChart entries={feedingData.entries} />
-              </Section>
+              </ChartArea>
             </>
           )}
 
-          <Rule label="DIAPERS · COUNT/DAY" accent={BR.cyan} />
-          <Section>{days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}</Section>
+          <Rule label="DIAPERS" accent={BR.cyan} />
+          <ChartArea>{days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}</ChartArea>
 
           {diaperData && diaperData.entries.length > 0 && (
             <>
               {computeDailyAvgDiaperInterval(diaperData.entries).length > 0 && (
                 <>
-                  <Rule label="DIAPER INTERVAL · H" accent={BR.cyan} />
-                  <Section>
+                  <SubKicker label="avg diaper interval · ч" accent={BR.cyan} />
+                  <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgDiaperInterval(diaperData.entries)}
                       color={COLORS.green400}
                     />
-                  </Section>
+                  </ChartArea>
                 </>
               )}
 
-              <Rule label="WET · SOIL GAPS · H" accent={BR.cyan} />
-              <Section>
+              <ChartArea>
                 <DiaperGapChart entries={diaperData.entries} />
-              </Section>
+              </ChartArea>
             </>
           )}
 
           {weightData && weightData.entries.length >= 2 && (
             <>
-              <Rule label="MASS · GRAMS" accent={BR.rose} />
-              <Section>
+              <Rule label="MASS · GROWTH" accent={BR.rose} />
+              <ChartArea>
                 <WeightChart entries={weightData.entries} />
-              </Section>
+              </ChartArea>
             </>
           )}
 
@@ -248,18 +241,22 @@ function DashboardPage() {
   )
 }
 
-function Section({ children }: { children: React.ReactNode }) {
+function ChartArea({ children }: { children: React.ReactNode }) {
+  return <div className="px-5">{children}</div>
+}
+
+function SubKicker({ label, accent = BR.amber }: { label: string; accent?: string }) {
   return (
-    <div className="px-5">
-      <div
-        style={{
-          border: `1px solid ${BR.line}`,
-          background: BR.char,
-          padding: 14,
-        }}
-      >
-        {children}
-      </div>
+    <div
+      className="px-5 pt-2 pb-1 uppercase"
+      style={{
+        fontFamily: BR.mono,
+        fontSize: 9,
+        letterSpacing: 2,
+        color: accent,
+      }}
+    >
+      › {label}
     </div>
   )
 }
