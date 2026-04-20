@@ -70,7 +70,7 @@ Ruff config: py312, line-length 100, select E/F/I/N/W/UP.
 - `src/types/index.ts` — TypeScript interfaces matching backend models
 - Bottom tab navigation: Upload (`/`), Log (`/log`), Review (`/review`), Dashboard (`/dashboard`)
 - Mobile-first, Tailwind CSS v4
-- All charts are hand-crafted SVG (no chart library) in `src/components/dashboard/`
+- Charts use Chart.js (v4) via react-chartjs-2 with chartjs-plugin-datalabels; chart components in `src/components/dashboard/`
 - Dashboard uses feeding session merging (20-min window) for velocity/gap calculations — see `mergeCloseFeedings()` in `utils.ts`
 
 ### Data & Business Logic

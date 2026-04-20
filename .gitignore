@@ -19,5 +19,8 @@ backend/.env
 .idea/
 .vscode/
 
+# macOS
+.DS_Store
+
 # TanStack Router generated
 frontend/src/routeTree.gen.ts
