@@ -165,6 +165,8 @@ async def get_upload_image(upload_id: int) -> FileResponse:
 
     filepath = Path(row["filepath"])
     if not filepath.exists():
+        filepath = Path(settings.upload_dir) / filepath.name
+    if not filepath.exists():
         raise HTTPException(status_code=404, detail="Image file not found")
 
     return FileResponse(filepath, filename=row["filename"])
