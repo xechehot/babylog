@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getLoggedDays, pooledAvgGapHours, computePeriodAverages } from './periodAverages'
+import { getLoggedDays, pooledAvgGapHours, computePeriodAverages, findMissingDays } from './periodAverages'
 import type { Entry, DashboardDay } from '../../types'
 
 function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type: Entry['entry_type'] }): Entry {
@@ -227,5 +227,46 @@ describe('computePeriodAverages', () => {
     expect(result.formulaInterval).toBeNull()
     // Diapers, excluding dry: 08 -> 11 => single 3h gap
     expect(result.diaperInterval).toBeCloseTo(3, 5)
+  })
+})
+
+describe('findMissingDays', () => {
+  it('returns empty when every day is logged', () => {
+    const logged = new Set(['2026-03-01', '2026-03-02', '2026-03-03'])
+    const result = findMissingDays('2026-03-01', '2026-03-03', logged, '2026-03-05')
+    expect(result).toEqual([])
+  })
+
+  it('returns dates not in logged set in ascending order', () => {
+    const logged = new Set(['2026-03-01', '2026-03-04'])
+    const result = findMissingDays('2026-03-01', '2026-03-05', logged, '2026-03-10')
+    // Today=2026-03-10, yesterday=2026-03-09 — both outside range, no exclusion effect
+    expect(result).toEqual(['2026-03-02', '2026-03-03', '2026-03-05'])
+  })
+
+  it('excludes today from the result', () => {
+    const logged = new Set(['2026-03-01'])
+    const result = findMissingDays('2026-03-01', '2026-03-03', logged, '2026-03-03')
+    // today=2026-03-03 excluded; yesterday=2026-03-02 excluded
+    expect(result).toEqual([])
+  })
+
+  it('excludes yesterday from the result', () => {
+    const logged = new Set(['2026-03-01'])
+    const result = findMissingDays('2026-03-01', '2026-03-04', logged, '2026-03-05')
+    // today=2026-03-05 (outside), yesterday=2026-03-04 excluded
+    expect(result).toEqual(['2026-03-02', '2026-03-03'])
+  })
+
+  it('handles a single-day range with no data', () => {
+    const logged = new Set<string>()
+    const result = findMissingDays('2026-03-01', '2026-03-01', logged, '2026-03-05')
+    expect(result).toEqual(['2026-03-01'])
+  })
+
+  it('handles a single-day range that is today', () => {
+    const logged = new Set<string>()
+    const result = findMissingDays('2026-03-05', '2026-03-05', logged, '2026-03-05')
+    expect(result).toEqual([])
   })
 })

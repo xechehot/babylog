@@ -105,3 +105,37 @@ export function computePeriodAverages(input: PeriodAveragesInput): PeriodAverage
     diaperInterval: pooledAvgGapHours(nonDryDiapers),
   }
 }
+
+/**
+ * Returns dates in [from, to] not present in loggedDays, sorted ascending.
+ * Today and yesterday are always excluded (a current-day or just-past gap is
+ * not yet a logging failure). `todayStr` is passed in for testability; callers
+ * should use `getTodayStr()` from `./utils`.
+ */
+export function findMissingDays(
+  from: string,
+  to: string,
+  loggedDays: Set<string>,
+  todayStr: string,
+): string[] {
+  const yesterdayStr = addDays(todayStr, -1)
+  const missing: string[] = []
+  let cursor = from
+  while (cursor <= to) {
+    if (cursor !== todayStr && cursor !== yesterdayStr && !loggedDays.has(cursor)) {
+      missing.push(cursor)
+    }
+    cursor = addDays(cursor, 1)
+  }
+  return missing
+}
+
+function addDays(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + delta)
+  const yy = dt.getFullYear()
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
