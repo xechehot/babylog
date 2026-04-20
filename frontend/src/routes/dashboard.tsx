@@ -25,7 +25,7 @@ import {
   computeDailyAvgDiaperInterval,
   computeDailyAvgFeedingSpeed,
 } from '../components/dashboard/dailyAggregates'
-import { getDateRange, formatDateRu } from '../components/dashboard/utils'
+import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 import { BR } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { Rule } from '../components/br/Rule'
@@ -36,12 +36,19 @@ export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
 
-type Period = 7 | 14 | 30
-const PERIODS: Period[] = [7, 14, 30]
+type PresetDays = 7 | 14 | 30
+const PRESETS: PresetDays[] = [7, 14, 30]
+
+type RangeSelection =
+  | { kind: 'preset'; days: PresetDays }
+  | { kind: 'custom'; from: string; to: string }
 
 function DashboardPage() {
-  const [period, setPeriod] = useState<Period>(7)
-  const { from_date, to_date } = getDateRange(period)
+  const [selection, setSelection] = useState<RangeSelection>({ kind: 'preset', days: 7 })
+  const { from_date, to_date } =
+    selection.kind === 'preset'
+      ? getDateRange(selection.days)
+      : { from_date: selection.from, to_date: selection.to }
   const { profile } = useProfile()
   const age = profile.birth_date ? formatAge(profile.birth_date) : null
 
@@ -102,7 +109,7 @@ function DashboardPage() {
       />
 
       <div className="px-5">
-        <PeriodSelector period={period} onChange={setPeriod} />
+        <PeriodSelector selection={selection} onChange={setSelection} />
       </div>
 
       {isLoading && (
@@ -266,43 +273,125 @@ function SubKicker({ label, accent = BR.amber }: { label: string; accent?: strin
   )
 }
 
-function PeriodSelector({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
+function PeriodSelector({
+  selection,
+  onChange,
+}: {
+  selection: RangeSelection
+  onChange: (s: RangeSelection) => void
+}) {
+  const today = getTodayStr()
+  const custom = selection.kind === 'custom'
+  // Seed the inputs from the currently-active range when switching to custom.
+  const initialFrom =
+    selection.kind === 'custom' ? selection.from : getDateRange(selection.days).from_date
+  const initialTo = custom ? selection.to : today
+
+  function setCustom(from: string, to: string) {
+    // Clamp `to` to today.
+    const clampedTo = to > today ? today : to
+    // Require non-empty; require from <= to.
+    if (!from || !clampedTo || from > clampedTo) return
+    onChange({ kind: 'custom', from, to: clampedTo })
+  }
+
   return (
-    <div className="flex gap-2" style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2 }}>
-      {PERIODS.map((p) => {
-        const on = p === period
-        return (
-          <button
-            key={p}
-            onClick={() => onChange(p)}
-            className="uppercase"
-            style={{
-              padding: '8px 14px',
-              border: `1px solid ${on ? BR.amber : BR.line}`,
-              color: on ? BR.amber : BR.dim,
-              background: on ? 'rgba(255,179,71,0.08)' : 'transparent',
-              textShadow: on ? `0 0 8px ${BR.amberGlow}` : 'none',
-              minHeight: 40,
-            }}
-          >
-            {p}D
-          </button>
-        )
-      })}
-      <div className="flex-1" />
-      <div className="flex items-center gap-1.5 uppercase" style={{ color: BR.dim }}>
-        <span>LIVE</span>
-        <span
-          className="inline-block rounded-full"
+    <div className="flex flex-col gap-2">
+      <div
+        className="flex gap-2 flex-wrap"
+        style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2 }}
+      >
+        {PRESETS.map((p) => {
+          const on = selection.kind === 'preset' && selection.days === p
+          return (
+            <button
+              key={p}
+              onClick={() => onChange({ kind: 'preset', days: p })}
+              className="uppercase"
+              style={{
+                padding: '8px 14px',
+                border: `1px solid ${on ? BR.amber : BR.line}`,
+                color: on ? BR.amber : BR.dim,
+                background: on ? 'rgba(255,179,71,0.08)' : 'transparent',
+                textShadow: on ? `0 0 8px ${BR.amberGlow}` : 'none',
+                minHeight: 40,
+              }}
+            >
+              {p}D
+            </button>
+          )
+        })}
+        <button
+          key="custom"
+          onClick={() =>
+            custom ? undefined : onChange({ kind: 'custom', from: initialFrom, to: initialTo })
+          }
+          className="uppercase"
           style={{
-            width: 6,
-            height: 6,
-            background: BR.amber,
-            boxShadow: `0 0 8px ${BR.amberGlow}`,
-            animation: 'brPulse 1.4s infinite ease-in-out',
+            padding: '8px 14px',
+            border: `1px solid ${custom ? BR.amber : BR.line}`,
+            color: custom ? BR.amber : BR.dim,
+            background: custom ? 'rgba(255,179,71,0.08)' : 'transparent',
+            textShadow: custom ? `0 0 8px ${BR.amberGlow}` : 'none',
+            minHeight: 40,
           }}
-        />
+        >
+          CUSTOM
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1.5 uppercase" style={{ color: BR.dim }}>
+          <span>LIVE</span>
+          <span
+            className="inline-block rounded-full"
+            style={{
+              width: 6,
+              height: 6,
+              background: BR.amber,
+              boxShadow: `0 0 8px ${BR.amberGlow}`,
+              animation: 'brPulse 1.4s infinite ease-in-out',
+            }}
+          />
+        </div>
       </div>
+      {custom && (
+        <div
+          className="flex gap-2 items-center"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 1.5 }}
+        >
+          <input
+            type="date"
+            value={selection.from}
+            max={selection.to}
+            onChange={(e) => setCustom(e.target.value, selection.to)}
+            style={{
+              padding: '6px 10px',
+              border: `1px solid ${BR.line}`,
+              color: BR.text,
+              background: BR.char,
+              fontFamily: BR.mono,
+              fontSize: 11,
+              colorScheme: 'dark',
+            }}
+          />
+          <span style={{ color: BR.dim }}>→</span>
+          <input
+            type="date"
+            value={selection.to}
+            min={selection.from}
+            max={today}
+            onChange={(e) => setCustom(selection.from, e.target.value)}
+            style={{
+              padding: '6px 10px',
+              border: `1px solid ${BR.line}`,
+              color: BR.text,
+              background: BR.char,
+              fontFamily: BR.mono,
+              fontSize: 11,
+              colorScheme: 'dark',
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
