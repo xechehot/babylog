@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - When asked to implement a feature, start coding immediately if a plan/spec is provided. Do not spend time exploring the codebase or writing a plan unless explicitly asked.
 - Always commit and push after completing implementation unless told otherwise. The typical workflow is: implement → build/test → commit → push.
+- **When creating a new worktree**, copy `backend/.env` from the main checkout into the new worktree so the worktree shares the same external data folders (uploads + SQLite DB) as main. Example: `cp ../../../backend/.env backend/.env` from the worktree root. Never commit `.env` (it's gitignored).
 
 ## What is babylog
 

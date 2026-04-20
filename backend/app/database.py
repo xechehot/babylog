@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import aiosqlite
 
@@ -57,6 +58,7 @@ async def _migrate(db: aiosqlite.Connection) -> None:
 
 
 async def init_db() -> None:
+    Path(settings.database_path).parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(settings.database_path) as db:
         await db.execute("PRAGMA journal_mode=WAL")
         await db.execute("PRAGMA foreign_keys=ON")
