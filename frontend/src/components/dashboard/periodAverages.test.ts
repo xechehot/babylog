@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getLoggedDays } from './periodAverages'
+import { getLoggedDays, pooledAvgGapHours } from './periodAverages'
 import type { Entry } from '../../types'
 
 function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type: Entry['entry_type'] }): Entry {
@@ -51,5 +51,66 @@ describe('getLoggedDays', () => {
     ]
     const result = getLoggedDays(feedings, [], '2026-03-01', '2026-03-07')
     expect(result).toEqual(new Set(['2026-03-01', '2026-03-07']))
+  })
+})
+
+describe('pooledAvgGapHours', () => {
+  it('returns null for empty input', () => {
+    expect(pooledAvgGapHours([])).toBeNull()
+  })
+
+  it('returns null for a single entry', () => {
+    expect(pooledAvgGapHours([{ occurred_at: '2026-03-01T08:00:00' }])).toBeNull()
+  })
+
+  it('averages gaps between two entries', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T08:00:00' },
+      { occurred_at: '2026-03-01T10:00:00' },
+    ])
+    expect(result).toBeCloseTo(2, 5)
+  })
+
+  it('averages multiple gaps', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T08:00:00' },
+      { occurred_at: '2026-03-01T10:00:00' }, // +2h
+      { occurred_at: '2026-03-01T14:00:00' }, // +4h
+    ])
+    expect(result).toBeCloseTo(3, 5) // (2 + 4) / 2
+  })
+
+  it('includes overnight gaps (no upper filter)', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T22:00:00' },
+      { occurred_at: '2026-03-02T08:00:00' }, // +10h
+    ])
+    expect(result).toBeCloseTo(10, 5)
+  })
+
+  it('drops gaps shorter than 10 minutes', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T08:00:00' },
+      { occurred_at: '2026-03-01T08:05:00' }, // +5min, dropped
+      { occurred_at: '2026-03-01T10:05:00' }, // +2h, kept
+    ])
+    expect(result).toBeCloseTo(2, 5)
+  })
+
+  it('returns null when all gaps are dropped', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T08:00:00' },
+      { occurred_at: '2026-03-01T08:05:00' },
+    ])
+    expect(result).toBeNull()
+  })
+
+  it('sorts input before computing gaps', () => {
+    const result = pooledAvgGapHours([
+      { occurred_at: '2026-03-01T14:00:00' },
+      { occurred_at: '2026-03-01T08:00:00' },
+      { occurred_at: '2026-03-01T10:00:00' },
+    ])
+    expect(result).toBeCloseTo(3, 5)
   })
 })
