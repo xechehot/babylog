@@ -31,6 +31,8 @@ export const ENTRY_COLOR: Record<string, string> = {
   'pee+poo': BR.stool,
   dry: BR.dim.replace('0.38', '0.7'),
   weight: BR.rose,
+  pills: BR.cyan,
+  vigantol: BR.cyan,
 }
 
 export function entryAccent(entryType: string, subtype?: string | null): string {
@@ -45,8 +47,10 @@ export function entryGlyph(entryType: string, subtype?: string | null): string {
   if (subtype === 'poo') return 'K'
   if (subtype === 'pee+poo') return 'PK'
   if (subtype === 'dry') return 'D'
+  if (subtype === 'vigantol') return 'VD'
   if (entryType === 'weight') return 'W'
   if (entryType === 'feeding') return 'F'
   if (entryType === 'diaper') return 'D'
+  if (entryType === 'pills') return 'Rx'
   return '·'
 }

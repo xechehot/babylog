@@ -1,6 +1,7 @@
-export type EntryType = 'feeding' | 'diaper' | 'weight'
+export type EntryType = 'feeding' | 'diaper' | 'weight' | 'pills'
 export type FeedingSubtype = 'breast' | 'formula'
 export type DiaperSubtype = 'pee' | 'poo' | 'dry' | 'pee+poo'
+export type PillsSubtype = 'vigantol'
 export type UploadStatus = 'pending' | 'processing' | 'done' | 'failed'
 export type Confidence = 'high' | 'medium' | 'low'
 

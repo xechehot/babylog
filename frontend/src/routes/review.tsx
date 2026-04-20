@@ -25,10 +25,12 @@ const TYPE_LABELS: Record<EntryType, string> = {
   feeding: 'FEEDING',
   diaper: 'DIAPER',
   weight: 'WEIGHT',
+  pills: 'PILLS',
 }
 
 const FEEDING_SUBTYPES = ['breast', 'formula'] as const
 const DIAPER_SUBTYPES = ['pee', 'poo', 'dry', 'pee+poo'] as const
+const PILLS_SUBTYPES = ['vigantol'] as const
 
 const CONFIDENCE_COLOR: Record<string, string> = {
   high: BR.amber,
@@ -423,6 +425,10 @@ function formatLabel(entryType: string, subtype: string | null): string {
     return 'DIAPER'
   }
   if (entryType === 'weight') return 'MASS'
+  if (entryType === 'pills') {
+    if (subtype === 'vigantol') return 'VIGANTOL'
+    return 'PILLS'
+  }
   return entryType.toUpperCase()
 }
 
@@ -499,6 +505,7 @@ function EntryCard({
               setEditType(newType)
               if (newType === 'feeding') setEditSubtype('formula')
               else if (newType === 'diaper') setEditSubtype('pee')
+              else if (newType === 'pills') setEditSubtype('vigantol')
               else setEditSubtype('')
             }}
           >
@@ -528,6 +535,19 @@ function EntryCard({
               onChange={(e) => setEditSubtype(e.target.value)}
             >
               {DIAPER_SUBTYPES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
+          {editType === 'pills' && (
+            <select
+              style={inputStyle}
+              value={editSubtype}
+              onChange={(e) => setEditSubtype(e.target.value)}
+            >
+              {PILLS_SUBTYPES.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -843,6 +863,7 @@ function AddEntryForm({
             setType(newType)
             if (newType === 'feeding') setSubtype('formula')
             else if (newType === 'diaper') setSubtype('pee')
+            else if (newType === 'pills') setSubtype('vigantol')
             else setSubtype('')
           }}
         >
@@ -864,6 +885,15 @@ function AddEntryForm({
         {type === 'diaper' && (
           <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {DIAPER_SUBTYPES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        )}
+        {type === 'pills' && (
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
+            {PILLS_SUBTYPES.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
