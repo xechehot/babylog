@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import type { TooltipItem } from 'chart.js'
 import type { Entry } from '../../types'
-import { baseLineOptions, formatDateTickRu, COLORS } from './chartConfig'
+import { baseLineOptions, formatDateTickRu, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
+import { LegendRow } from '../br/LegendRow'
 
 interface GapPoint {
   occurred_at: string
@@ -57,29 +59,33 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
   if (points.length < 2) return null
 
   const movingAvg = computeMovingAverage(points)
-
   const labels = buildDeduplicatedLabels(points)
 
   const chartData = {
     labels,
     datasets: [
       {
-        label: 'ч',
+        label: 'h',
         data: points.map((p) => p.gap),
         showLine: false,
-        pointRadius: 3,
-        pointBackgroundColor: COLORS.green300alpha,
-        pointBorderColor: 'transparent',
+        pointRadius: 3.5,
+        pointBackgroundColor: BR_CHART.cyan,
+        pointBorderColor: BR_CHART.ink,
+        pointBorderWidth: 1,
         datalabels: { display: false },
+        order: 1,
       },
       {
         label: 'MA',
         data: movingAvg,
         pointRadius: 0,
-        borderColor: COLORS.green600,
+        borderColor: BR_CHART.amber,
         borderWidth: 2,
+        borderDash: [4, 3],
         tension: 0.2,
+        fill: false,
         datalabels: { display: false },
+        order: 0,
       },
     ],
   }
@@ -93,7 +99,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => {
             const v = (ctx.parsed.y ?? 0).toFixed(1)
-            return ctx.datasetIndex === 0 ? `${v} ч` : `MA: ${v} ч`
+            return ctx.datasetIndex === 0 ? `${v}h` : `MA: ${v}h`
           },
         },
       },
@@ -101,9 +107,22 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
+    <ChartCard
+      kicker="SCATTER · DIAPER GAPS"
+      title="Diaper gaps"
+      subtitle="interval between diaper events"
+      accent={BR_CHART.cyan}
+      footer={
+        <LegendRow
+          items={[
+            { color: BR_CHART.cyan, label: 'per event' },
+            { color: BR_CHART.amber, line: true, label: 'moving avg' },
+          ]}
+        />
+      }
+    >
       <Line data={chartData} options={options} />
-    </div>
+    </ChartCard>
   )
 }
 

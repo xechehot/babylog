@@ -52,29 +52,21 @@ export function mergeCloseFeedings(entries: Entry[]): MergedFeeding[] {
   return merged
 }
 
-const DAY_NAMES_RU = [
-  'воскресенье',
-  'понедельник',
-  'вторник',
-  'среда',
-  'четверг',
-  'пятница',
-  'суббота',
-]
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-export const MONTH_SHORT_RU: Record<number, string> = {
-  0: 'янв',
-  1: 'фев',
-  2: 'мар',
-  3: 'апр',
-  4: 'май',
-  5: 'июн',
-  6: 'июл',
-  7: 'авг',
-  8: 'сен',
-  9: 'окт',
-  10: 'ноя',
-  11: 'дек',
+export const MONTH_SHORT: Record<number, string> = {
+  0: 'Jan',
+  1: 'Feb',
+  2: 'Mar',
+  3: 'Apr',
+  4: 'May',
+  5: 'Jun',
+  6: 'Jul',
+  7: 'Aug',
+  8: 'Sep',
+  9: 'Oct',
+  10: 'Nov',
+  11: 'Dec',
 }
 
 function formatISO(d: Date): string {
@@ -84,10 +76,10 @@ function formatISO(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-/** Formats "2026-03-01" as "1 мар" */
+/** Formats "2026-03-01" as "1 Mar" */
 export function formatDateRu(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
-  return `${d.getDate()} ${MONTH_SHORT_RU[d.getMonth()]}`
+  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`
 }
 
 /** Returns inclusive date range for the given period in days. */
@@ -103,8 +95,8 @@ export function getTodayStr(): string {
   return formatISO(new Date())
 }
 
-/** Formats "2026-03-01" as "1 мар, суббота" */
+/** Formats "2026-03-01" as "1 Mar, Saturday" */
 export function formatDateRuFull(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
-  return `${d.getDate()} ${MONTH_SHORT_RU[d.getMonth()]}, ${DAY_NAMES_RU[d.getDay()]}`
+  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}, ${DAY_NAMES[d.getDay()]}`
 }

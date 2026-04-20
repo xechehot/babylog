@@ -55,7 +55,7 @@ export function formatAge(birthDate: string): string | null {
   if (days === null || days < 0) return null
 
   if (days < 7) {
-    return `${days} ${pluralize(days, 'день', 'дня', 'дней')}`
+    return `${days} ${plural(days, 'day')}`
   }
 
   const weeks = Math.floor(days / 7)
@@ -63,9 +63,9 @@ export function formatAge(birthDate: string): string | null {
 
   if (weeks < 12) {
     // Show weeks + days
-    let result = `${weeks} ${pluralize(weeks, 'неделя', 'недели', 'недель')}`
+    let result = `${weeks} ${plural(weeks, 'week')}`
     if (remainingDays > 0) {
-      result += ` ${remainingDays} ${pluralize(remainingDays, 'день', 'дня', 'дней')}`
+      result += ` ${remainingDays} ${plural(remainingDays, 'day')}`
     }
     return result
   }
@@ -83,18 +83,13 @@ export function formatAge(birthDate: string): string | null {
     (now.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24),
   )
   const remainingWeeks = Math.floor(remainingDaysAfterMonths / 7)
-  let result = `${months} ${pluralize(months, 'месяц', 'месяца', 'месяцев')}`
+  let result = `${months} ${plural(months, 'month')}`
   if (remainingWeeks > 0) {
-    result += ` ${remainingWeeks} ${pluralize(remainingWeeks, 'неделя', 'недели', 'недель')}`
+    result += ` ${remainingWeeks} ${plural(remainingWeeks, 'week')}`
   }
   return result
 }
 
-function pluralize(n: number, one: string, few: string, many: string): string {
-  const abs = Math.abs(n) % 100
-  const lastDigit = abs % 10
-  if (abs > 10 && abs < 20) return many
-  if (lastDigit === 1) return one
-  if (lastDigit >= 2 && lastDigit <= 4) return few
-  return many
+function plural(n: number, word: string): string {
+  return n === 1 ? word : `${word}s`
 }

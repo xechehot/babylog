@@ -1,35 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, forwardRef } from 'react'
 import { api } from '../api/client'
 import type { Entry, EntryType } from '../types'
 import { getDateRange, getTodayStr, formatDateRuFull } from '../components/dashboard/utils'
 import { BottomSheet } from '../components/BottomSheet'
 import {
-  TYPE_LABELS_RU,
-  SUBTYPE_LABELS_RU,
-  getEntryIcon,
+  TYPE_LABELS,
+  SUBTYPE_LABELS,
   FEEDING_SUBTYPES,
   DIAPER_SUBTYPES,
 } from '../components/entry/constants'
+import { BR, entryAccent } from '../components/br/theme'
+import { PageHead } from '../components/br/PageHead'
+import { GlyphDot } from '../components/br/GlyphDot'
 
 export const Route = createFileRoute('/log')({
   component: LogPage,
 })
-
-const ENTRY_COLORS: Record<string, string> = {
-  feeding: 'bg-blue-50 border-blue-200',
-  pee: 'bg-amber-50 border-amber-200',
-  'pee+poo': 'bg-amber-50 border-amber-200',
-  poo: 'bg-orange-100 border-orange-300',
-  dry: 'bg-gray-50 border-gray-200',
-  weight: 'bg-green-50 border-green-200',
-}
-
-function getRowColor(entryType: string, subtype: string | null): string {
-  if (subtype && ENTRY_COLORS[subtype]) return ENTRY_COLORS[subtype]
-  return ENTRY_COLORS[entryType] ?? 'bg-white border-gray-200'
-}
 
 function LogPage() {
   const queryClient = useQueryClient()
@@ -52,7 +40,6 @@ function LogPage() {
 
   const entries = entriesQuery.data?.entries ?? []
 
-  // Group by date (descending: newest day first)
   const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
     const d = entry.date
     if (!acc[d]) acc[d] = []
@@ -61,7 +48,6 @@ function LogPage() {
   }, {})
   const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
 
-  // Auto-scroll to today once
   useEffect(() => {
     if (entries.length > 0 && !scrolledRef.current && todayRef.current) {
       todayRef.current.scrollIntoView({ behavior: 'instant', block: 'start' })
@@ -112,36 +98,86 @@ function LogPage() {
   })
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))]">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0">
-        <h1 className="text-xl font-bold">Журнал</h1>
+    <>
+      <PageHead
+        kicker="TIMELINE · UNIT 04-RZ"
+        title={
+          <>
+            Response <span style={{ color: BR.amber, fontStyle: 'italic' }}>log</span>
+          </>
+        }
+        meta={[`${entries.length} ENTRIES`, `${sortedDates.length} DAYS`, `RANGE ${rangeDays}D`]}
+      />
+
+      {/* search/filter row */}
+      <div
+        className="mx-5 flex items-center gap-2.5"
+        style={{
+          padding: '10px 12px',
+          border: `1px solid ${BR.line}`,
+          fontFamily: BR.mono,
+          fontSize: 12,
+          color: BR.dim,
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+          <circle cx="5" cy="5" r="4" stroke={BR.amber} strokeWidth="1" />
+          <path d="M8 8l3 3" stroke={BR.amber} strokeWidth="1" />
+        </svg>
+        <span style={{ color: BR.amber, letterSpacing: 2 }}>QUERY</span>
+        <span style={{ flex: 1, letterSpacing: 1 }}>› filter: all types</span>
         <button
-          className="text-sm font-medium text-blue-600 active:text-blue-800 min-h-[44px] px-3"
           onClick={() => {
             setSheetOpen(true)
             setEditingId(null)
           }}
+          className="uppercase"
+          style={{
+            color: BR.amber,
+            letterSpacing: 2,
+            borderLeft: `1px solid ${BR.line}`,
+            paddingLeft: 10,
+            fontFamily: BR.mono,
+            fontSize: 11,
+          }}
         >
-          + Добавить
+          + NEW
         </button>
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {entriesQuery.isLoading && <p className="text-gray-400 text-center mt-8">Загрузка...</p>}
+      <div className="mt-2">
+        {entriesQuery.isLoading && (
+          <p
+            className="text-center mt-8 uppercase"
+            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+          >
+            Loading…
+          </p>
+        )}
 
         {!entriesQuery.isLoading && entries.length === 0 && (
-          <p className="text-gray-400 text-center mt-8">Нет записей за выбранный период</p>
+          <p
+            className="text-center mt-8 uppercase"
+            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+          >
+            No entries for this period
+          </p>
         )}
 
         {sortedDates.map((date) => {
           const isToday = date === todayStr
           const dayEntries = grouped[date]
+          const totals = computeTotals(dayEntries)
           return (
             <div key={date}>
-              <DayHeader ref={isToday ? todayRef : undefined} dateStr={date} isToday={isToday} />
-              <div className="px-4 pb-2 space-y-1.5">
+              <DayHeader
+                ref={isToday ? todayRef : undefined}
+                dateStr={date}
+                isToday={isToday}
+                totals={totals}
+              />
+              <div>
                 {[...dayEntries].reverse().map((entry) =>
                   editingId === entry.id ? (
                     <InlineEditForm
@@ -151,7 +187,7 @@ function LogPage() {
                       onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
                       onCancel={() => setEditingId(null)}
                       onDelete={() => {
-                        if (confirm('Удалить запись?')) {
+                        if (confirm('Delete this entry?')) {
                           deleteMutation.mutate(entry.id)
                           setEditingId(null)
                         }
@@ -173,87 +209,263 @@ function LogPage() {
           )
         })}
 
-        {/* Load more */}
         {!entriesQuery.isLoading && entries.length > 0 && (
-          <div className="px-4 py-4">
+          <div className="px-5 py-4">
             <button
-              className="w-full py-3 text-sm text-blue-600 border border-blue-200 rounded-lg active:bg-blue-50 min-h-[44px]"
+              className="w-full py-3 uppercase"
               onClick={() => setRangeDays((d) => d + 14)}
               disabled={entriesQuery.isFetching}
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 10,
+                letterSpacing: 2,
+                color: BR.amber,
+                border: `1px solid ${BR.line}`,
+                background: 'rgba(255,179,71,0.04)',
+              }}
             >
-              {entriesQuery.isFetching ? 'Загрузка...' : 'Загрузить ещё'}
+              {entriesQuery.isFetching ? 'LOADING…' : '⤓ LOAD MORE'}
             </button>
           </div>
         )}
       </div>
 
-      {/* Add entry bottom sheet */}
-      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Новая запись">
+      {/* Floating action */}
+      <button
+        onClick={() => {
+          setSheetOpen(true)
+          setEditingId(null)
+        }}
+        aria-label="Add entry"
+        className="fixed z-30 flex items-center justify-center"
+        style={{
+          right: 22,
+          bottom: 100,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          background: BR.ink,
+          border: `1px solid ${BR.amber}`,
+          color: BR.amber,
+          fontFamily: BR.mono,
+          fontSize: 26,
+          boxShadow: `0 0 30px ${BR.amberGlow}, inset 0 0 15px rgba(255,179,71,0.15)`,
+        }}
+      >
+        ＋
+      </button>
+
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="NEW ENTRY">
         <EntryForm
           isSaving={createMutation.isPending}
           onSave={(data) => createMutation.mutate(data)}
         />
       </BottomSheet>
-    </div>
+    </>
   )
 }
 
-/* ---------- DayHeader ---------- */
+function computeTotals(entries: Entry[]) {
+  let feedMl = 0
+  let pee = 0
+  let poo = 0
+  for (const e of entries) {
+    if (e.entry_type === 'feeding' && e.value) feedMl += e.value
+    if (e.subtype === 'pee') pee += 1
+    if (e.subtype === 'poo') poo += 1
+    if (e.subtype === 'pee+poo') {
+      pee += 1
+      poo += 1
+    }
+  }
+  return { feedMl: Math.round(feedMl), pee, poo }
+}
 
-import { forwardRef } from 'react'
-
-const DayHeader = forwardRef<HTMLDivElement, { dateStr: string; isToday: boolean }>(
-  ({ dateStr, isToday }, ref) => (
-    <div
-      ref={ref}
-      className="sticky top-[57px] z-20 bg-gray-100/95 backdrop-blur-sm px-4 py-2 flex items-center gap-2"
-    >
-      <span className="text-sm font-semibold text-gray-600">{formatDateRuFull(dateStr)}</span>
+const DayHeader = forwardRef<
+  HTMLDivElement,
+  { dateStr: string; isToday: boolean; totals: { feedMl: number; pee: number; poo: number } }
+>(({ dateStr, isToday, totals }, ref) => (
+  <div
+    ref={ref}
+    className="relative"
+    style={{
+      padding: '20px 20px 10px',
+      borderTop: `1px solid ${BR.lineStrong}`,
+      background: 'linear-gradient(to bottom, rgba(255,179,71,0.06), transparent 70%)',
+    }}
+  >
+    <div className="flex items-baseline justify-between">
+      <div>
+        <div
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 10,
+            letterSpacing: 2.5,
+            color: BR.dim,
+          }}
+        >
+          {formatWeekday(dateStr)}
+        </div>
+        <div
+          className="mt-0.5"
+          style={{
+            fontFamily: BR.display,
+            fontSize: 22,
+            fontWeight: 500,
+            letterSpacing: -0.5,
+            color: BR.text,
+          }}
+        >
+          {formatDateRuFull(dateStr)}
+        </div>
+      </div>
       {isToday && (
-        <span className="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">
-          СЕГОДНЯ
+        <span
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 9,
+            letterSpacing: 2.5,
+            color: BR.amber,
+            padding: '4px 8px',
+            border: `1px solid ${BR.amber}`,
+            textShadow: `0 0 8px ${BR.amberGlow}`,
+            boxShadow: '0 0 10px rgba(255,179,71,0.2), inset 0 0 10px rgba(255,179,71,0.08)',
+          }}
+        >
+          ● CURRENT
         </span>
       )}
     </div>
-  ),
-)
+    {(totals.feedMl > 0 || totals.pee > 0 || totals.poo > 0) && (
+      <div
+        className="mt-2.5 flex gap-4 uppercase"
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 10,
+          letterSpacing: 1.5,
+          color: BR.dim,
+        }}
+      >
+        <span>
+          FEED · <span style={{ color: BR.amber }}>{totals.feedMl}ml</span>
+        </span>
+        <span>
+          WET · <span style={{ color: BR.cyan }}>{totals.pee}</span>
+        </span>
+        <span>
+          STL · <span style={{ color: BR.stool }}>{totals.poo}</span>
+        </span>
+      </div>
+    )}
+  </div>
+))
+DayHeader.displayName = 'DayHeader'
 
-/* ---------- EntryRow ---------- */
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+function formatWeekday(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return WEEKDAYS[d.getDay()] ?? ''
+}
 
 function EntryRow({ entry, onTap }: { entry: Entry; onTap: () => void }) {
   const time = entry.occurred_at.split(' ')[1]?.slice(0, 5) ?? ''
-  const icon = getEntryIcon(entry.entry_type, entry.subtype)
-  const color = getRowColor(entry.entry_type, entry.subtype)
-
-  let label = TYPE_LABELS_RU[entry.entry_type] ?? entry.entry_type
-  if (entry.subtype && SUBTYPE_LABELS_RU[entry.subtype]) {
-    label = SUBTYPE_LABELS_RU[entry.subtype]
-  }
-
-  let valueStr = ''
-  if (entry.value != null) {
-    if (entry.entry_type === 'weight') {
-      valueStr = `${(entry.value / 1000).toFixed(2)} кг`
-    } else {
-      valueStr = `${entry.value} мл`
-    }
-  }
+  const accent = entryAccent(entry.entry_type, entry.subtype)
+  const label = formatLabelEn(entry.entry_type, entry.subtype)
+  const valueStr = formatValue(entry)
 
   return (
     <button
-      className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left active:opacity-70 ${color}`}
+      className="w-full grid items-center text-left"
       onClick={onTap}
+      style={{
+        gridTemplateColumns: '52px 26px 1fr auto',
+        gap: 14,
+        padding: '11px 20px',
+        borderBottom: `1px dashed ${BR.line}`,
+      }}
     >
-      <span className="text-xs text-gray-400 w-10 shrink-0 tabular-nums">{time}</span>
-      <span className="text-base">{icon}</span>
-      <span className="text-sm font-medium">{label}</span>
-      {valueStr && <span className="text-sm text-gray-600">{valueStr}</span>}
-      {entry.notes && <span className="text-xs text-gray-400 truncate ml-auto">{entry.notes}</span>}
+      <div
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 13,
+          color: BR.text,
+          letterSpacing: 0.5,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {time}
+      </div>
+      <GlyphDot entryType={entry.entry_type} subtype={entry.subtype} />
+      <div className="min-w-0">
+        <div
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            color: accent,
+          }}
+        >
+          {label}
+        </div>
+        {entry.notes && (
+          <div
+            className="truncate mt-0.5"
+            style={{
+              fontFamily: BR.serif,
+              fontStyle: 'italic',
+              fontSize: 13,
+              color: BR.dim,
+              letterSpacing: 0.2,
+            }}
+          >
+            «{entry.notes}»
+          </div>
+        )}
+      </div>
+      <div
+        style={{
+          fontFamily: BR.display,
+          fontSize: 18,
+          fontWeight: 500,
+          color: valueStr ? BR.text : BR.dim,
+          fontVariantNumeric: 'tabular-nums',
+          textShadow:
+            valueStr && entry.entry_type === 'feeding' ? `0 0 12px ${BR.amberGlow}` : 'none',
+        }}
+      >
+        {valueStr || '—'}
+      </div>
     </button>
   )
 }
 
-/* ---------- InlineEditForm ---------- */
+function formatLabelEn(entryType: string, subtype: string | null): string {
+  if (entryType === 'feeding') {
+    if (subtype === 'breast') return 'FEEDING · BREAST'
+    if (subtype === 'formula') return 'FEEDING · FORMULA'
+    return 'FEEDING'
+  }
+  if (entryType === 'diaper') {
+    if (subtype === 'pee') return 'DIAPER · WET'
+    if (subtype === 'poo') return 'DIAPER · SOILED'
+    if (subtype === 'pee+poo') return 'DIAPER · WET+SOILED'
+    if (subtype === 'dry') return 'DIAPER · DRY'
+    return 'DIAPER'
+  }
+  if (entryType === 'weight') return 'WEIGHT · MASS'
+  return entryType.toUpperCase()
+}
+
+function formatValue(entry: Entry): string {
+  if (entry.value == null) return ''
+  if (entry.entry_type === 'weight') return `${(entry.value / 1000).toFixed(2)} kg`
+  if (entry.entry_type === 'feeding') return `${entry.value} ml`
+  return String(entry.value)
+}
 
 function InlineEditForm({
   entry,
@@ -281,11 +493,31 @@ function InlineEditForm({
   const [editValue, setEditValue] = useState(entry.value?.toString() ?? '')
   const [editNotes, setEditNotes] = useState(entry.notes ?? '')
 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 14,
+    color: BR.text,
+    background: BR.char,
+    border: `1px solid ${BR.line}`,
+    padding: '10px 12px',
+    minHeight: 44,
+    letterSpacing: 0.5,
+    width: '100%',
+  }
+
   return (
-    <div className="rounded-lg border-2 border-blue-300 bg-white p-3 space-y-2">
+    <div
+      className="mx-3"
+      style={{
+        padding: 14,
+        border: `1px solid ${BR.amber}`,
+        background: 'rgba(255,179,71,0.04)',
+        boxShadow: `inset 0 0 12px rgba(255,179,71,0.08)`,
+      }}
+    >
       <div className="grid grid-cols-2 gap-2">
         <select
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={editType}
           onChange={(e) => {
             const t = e.target.value as EntryType
@@ -295,7 +527,7 @@ function InlineEditForm({
             else setEditSubtype('')
           }}
         >
-          {Object.entries(TYPE_LABELS_RU).map(([val, label]) => (
+          {Object.entries(TYPE_LABELS).map(([val, label]) => (
             <option key={val} value={val}>
               {label}
             </option>
@@ -303,64 +535,64 @@ function InlineEditForm({
         </select>
         {editType === 'feeding' && (
           <select
-            className="p-2 border rounded text-base min-h-[44px]"
+            style={inputStyle}
             value={editSubtype}
             onChange={(e) => setEditSubtype(e.target.value)}
           >
             {FEEDING_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
         )}
         {editType === 'diaper' && (
           <select
-            className="p-2 border rounded text-base min-h-[44px]"
+            style={inputStyle}
             value={editSubtype}
             onChange={(e) => setEditSubtype(e.target.value)}
           >
             {DIAPER_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 mt-2">
         <input
           type="date"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={editDate}
           onChange={(e) => setEditDate(e.target.value)}
         />
         <input
           type="time"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={editTime}
           onChange={(e) => setEditTime(e.target.value)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 mt-2">
         <input
           type="number"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          placeholder="Значение"
+          placeholder="Value"
         />
         <input
           type="text"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={editNotes}
           onChange={(e) => setEditNotes(e.target.value)}
-          placeholder="Заметки"
+          placeholder="Notes"
         />
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 mt-3">
         <button
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded min-h-[44px] disabled:opacity-50"
+          className="flex-1 uppercase"
           disabled={isSaving}
           onClick={() =>
             onSave({
@@ -371,21 +603,54 @@ function InlineEditForm({
               notes: editNotes || null,
             })
           }
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            color: BR.amber,
+            padding: '10px 12px',
+            border: `1px solid ${BR.amber}`,
+            background: 'rgba(255,179,71,0.12)',
+            textShadow: `0 0 10px ${BR.amberGlow}`,
+            minHeight: 44,
+          }}
         >
-          Сохранить
+          [ SAVE ]
         </button>
-        <button className="px-4 py-2 text-sm bg-gray-200 rounded min-h-[44px]" onClick={onCancel}>
-          Отмена
+        <button
+          className="uppercase"
+          onClick={onCancel}
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            color: BR.dim,
+            padding: '10px 12px',
+            border: `1px solid ${BR.line}`,
+            minHeight: 44,
+          }}
+        >
+          CANCEL
         </button>
-        <button className="px-4 py-2 text-sm text-red-600 ml-auto min-h-[44px]" onClick={onDelete}>
-          Удалить
+        <button
+          className="ml-auto uppercase"
+          onClick={onDelete}
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2,
+            color: BR.blood,
+            padding: '10px 12px',
+            border: `1px solid ${BR.blood}`,
+            minHeight: 44,
+          }}
+        >
+          DEL
         </button>
       </div>
     </div>
   )
 }
-
-/* ---------- EntryForm (for BottomSheet) ---------- */
 
 function EntryForm({
   isSaving,
@@ -409,11 +674,23 @@ function EntryForm({
 
   const occurredAt = date && time ? `${date} ${time}` : ''
 
+  const inputStyle: React.CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 16,
+    color: BR.text,
+    background: BR.char,
+    border: `1px solid ${BR.line}`,
+    padding: '10px 12px',
+    minHeight: 44,
+    letterSpacing: 0.5,
+    width: '100%',
+  }
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <select
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={type}
           onChange={(e) => {
             const t = e.target.value as EntryType
@@ -423,34 +700,26 @@ function EntryForm({
             else setSubtype('')
           }}
         >
-          {Object.entries(TYPE_LABELS_RU).map(([val, label]) => (
+          {Object.entries(TYPE_LABELS).map(([val, label]) => (
             <option key={val} value={val}>
               {label}
             </option>
           ))}
         </select>
         {type === 'feeding' && (
-          <select
-            className="p-2 border rounded text-base min-h-[44px]"
-            value={subtype}
-            onChange={(e) => setSubtype(e.target.value)}
-          >
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {FEEDING_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
         )}
         {type === 'diaper' && (
-          <select
-            className="p-2 border rounded text-base min-h-[44px]"
-            value={subtype}
-            onChange={(e) => setSubtype(e.target.value)}
-          >
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {DIAPER_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -459,13 +728,13 @@ function EntryForm({
       <div className="grid grid-cols-2 gap-2">
         <input
           type="date"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
         <input
           type="time"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={time}
           onChange={(e) => setTime(e.target.value)}
           autoFocus
@@ -474,21 +743,21 @@ function EntryForm({
       <div className="grid grid-cols-2 gap-2">
         <input
           type="number"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Значение"
+          placeholder="Value"
         />
         <input
           type="text"
-          className="p-2 border rounded text-base min-h-[44px]"
+          style={inputStyle}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Заметки"
+          placeholder="Notes"
         />
       </div>
       <button
-        className="w-full py-3 text-sm font-medium bg-blue-600 text-white rounded-lg min-h-[44px] disabled:opacity-50"
+        className="w-full uppercase"
         disabled={!occurredAt || isSaving}
         onClick={() =>
           onSave({
@@ -499,8 +768,20 @@ function EntryForm({
             notes: notes || null,
           })
         }
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 12,
+          letterSpacing: 2,
+          color: BR.amber,
+          padding: '14px 12px',
+          border: `1px solid ${BR.amber}`,
+          background: 'rgba(255,179,71,0.12)',
+          textShadow: `0 0 10px ${BR.amberGlow}`,
+          minHeight: 48,
+          opacity: !occurredAt || isSaving ? 0.5 : 1,
+        }}
       >
-        {isSaving ? 'Сохранение...' : 'Добавить запись'}
+        {isSaving ? 'SAVING…' : '[ SAVE ]'}
       </button>
     </div>
   )

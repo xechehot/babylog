@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Bar } from 'react-chartjs-2'
 import type { Entry } from '../../types'
-import { baseBarOptions, COLORS } from './chartConfig'
+import { baseBarOptions, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
+import { Pill } from '../br/Pill'
 
 type Filter = 'all' | 'formula' | 'breast'
 
@@ -21,30 +23,31 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
       counts[hour]++
     }
 
-    const color = filter === 'breast' ? COLORS.purple400 : COLORS.blue400
+    const color = filter === 'breast' ? BR_CHART.cyan : BR_CHART.amber
+    const fill = filter === 'breast' ? BR_CHART.cyanFill : BR_CHART.amberFill
 
     const data = {
       labels: Array.from({ length: 24 }, (_, i) => i.toString()),
       datasets: [
         {
           data: counts,
-          backgroundColor: color,
-          borderRadius: 2,
+          backgroundColor: fill,
+          borderColor: color,
+          borderWidth: 1.2,
+          borderRadius: 0,
+          borderSkipped: false,
           datalabels: {
             display: (ctx: { dataIndex: number }) => counts[ctx.dataIndex] > 0,
             anchor: 'end' as const,
             align: 'top' as const,
-            color: '#6b7280',
-            font: { size: 9 },
+            color,
+            font: { family: '"JetBrains Mono"', size: 9 },
           },
         },
       ],
     }
 
-    const opts = {
-      ...baseBarOptions(),
-      layout: { padding: { top: 12 } },
-    }
+    const opts = { ...baseBarOptions(), layout: { padding: { top: 18 } } }
     opts.scales = {
       ...opts.scales,
       x: {
@@ -52,7 +55,7 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
         ticks: {
           ...opts.scales!.x!.ticks,
           callback: function (_value: string | number, index: number) {
-            return index % 3 === 0 ? index.toString() : ''
+            return index % 3 === 0 ? String(index).padStart(2, '0') : ''
           },
         },
       },
@@ -62,23 +65,29 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
   }, [entries, filter])
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <div className="flex items-center justify-end gap-1 mb-1">
-        {(['all', 'formula', 'breast'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs px-2 py-0.5 rounded-full border ${
-              filter === f
-                ? 'bg-blue-50 border-blue-300 text-blue-600'
-                : 'bg-gray-50 border-gray-300 text-gray-500'
-            }`}
+    <ChartCard
+      kicker="BAR · 24H DISTRIBUTION"
+      title="Feeding by hour"
+      subtitle="when feedings happen"
+      toolbar={
+        <>
+          <Pill active={filter === 'all'} onClick={() => setFilter('all')}>
+            all
+          </Pill>
+          <Pill
+            active={filter === 'breast'}
+            onClick={() => setFilter('breast')}
+            accent={BR_CHART.cyan}
           >
-            {f === 'all' ? 'все' : f === 'formula' ? 'смесь' : 'грудь'}
-          </button>
-        ))}
-      </div>
+            breast
+          </Pill>
+          <Pill active={filter === 'formula'} onClick={() => setFilter('formula')}>
+            formula
+          </Pill>
+        </>
+      }
+    >
       <Bar data={chartData} options={options} />
-    </div>
+    </ChartCard>
   )
 }

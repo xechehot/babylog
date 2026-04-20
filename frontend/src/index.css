@@ -1,1 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=JetBrains+Mono:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,500&family=Caveat:wght@400;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #06080a;
+  --color-char: #0b0f12;
+  --color-char-2: #10161b;
+  --color-amber: #ffb347;
+  --color-amber-glow: rgba(255, 179, 71, 0.55);
+  --color-cyan-br: #64f0e8;
+  --color-cyan-glow: rgba(100, 240, 232, 0.4);
+  --color-rose-br: #ff9ea3;
+  --color-stool: #b8946a;
+  --color-blood: #ff4d4d;
+  --color-body: #f0e3cc;
+  --color-dim: rgba(215, 200, 180, 0.38);
+  --color-line: rgba(215, 170, 110, 0.14);
+  --color-line-strong: rgba(215, 170, 110, 0.28);
+
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Unbounded', 'JetBrains Mono', monospace;
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-hand: 'Caveat', cursive;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-body);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* Form controls use dark palette */
+input,
+select,
+textarea,
+button {
+  font-family: var(--font-mono);
+  color: var(--color-body);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* Date/time/number pickers — force dark and amber accents on WebKit */
+input[type='date'],
+input[type='time'],
+input[type='number'],
+input[type='text'],
+input[type='search'] {
+  color-scheme: dark;
+}
+
+/* Animations referenced across the app */
+@keyframes brPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes brScan {
+  0% {
+    top: 0;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+@keyframes brScan2 {
+  0% {
+    top: 10%;
+  }
+  50% {
+    top: 85%;
+  }
+  100% {
+    top: 10%;
+  }
+}
+
+@keyframes brBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Thin custom scrollbar for the noir shell */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-amber);
+}
+
+/* Utility classes for the Blade Runner aesthetic */
+.br-scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: screen;
+  z-index: 2;
+}
+
+.br-glow-amber {
+  text-shadow: 0 0 10px var(--color-amber-glow);
+}

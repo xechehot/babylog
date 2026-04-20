@@ -19,7 +19,6 @@ import { WeightChart } from '../components/dashboard/WeightChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
-import { useProfile } from '../hooks/useProfile'
 import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
@@ -27,6 +26,11 @@ import {
   computeDailyAvgFeedingSpeed,
 } from '../components/dashboard/dailyAggregates'
 import { getDateRange, formatDateRu } from '../components/dashboard/utils'
+import { BR } from '../components/br/theme'
+import { PageHead } from '../components/br/PageHead'
+import { Rule } from '../components/br/Rule'
+import { ReadoutTile } from '../components/br/ReadoutTile'
+import { useProfile, formatAge } from '../hooks/useProfile'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
@@ -38,8 +42,8 @@ const PERIODS: Period[] = [7, 14, 30]
 function DashboardPage() {
   const [period, setPeriod] = useState<Period>(7)
   const { from_date, to_date } = getDateRange(period)
-
   const { profile } = useProfile()
+  const age = profile.birth_date ? formatAge(profile.birth_date) : null
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard', { from_date, to_date }],
@@ -82,153 +86,346 @@ function DashboardPage() {
   )
 
   return (
-    <div className="p-4 space-y-4">
-      <PeriodSelector period={period} onChange={setPeriod} />
+    <>
+      <PageHead
+        kicker="VITALS · INDEX"
+        title={
+          <>
+            Vital <span style={{ color: BR.amber }}>Index</span>
+          </>
+        }
+        meta={[
+          `${from_date}→${to_date}`,
+          profile.baby_name ? `UNIT ${profile.baby_name.toUpperCase()}` : 'UNIT 04-RZ',
+          age ? `AGE ${age.replace(' ', '')}` : null,
+        ]}
+      />
 
-      {isLoading && <p className="text-gray-400 text-center py-8">Загрузка...</p>}
-      {isError && <p className="text-red-500 text-center text-sm">{(error as Error).message}</p>}
+      <div className="px-5">
+        <PeriodSelector period={period} onChange={setPeriod} />
+      </div>
+
+      {isLoading && (
+        <p
+          className="text-center py-8 uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          Loading…
+        </p>
+      )}
+      {isError && (
+        <p
+          className="text-center text-sm mt-4 uppercase px-5"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 1.5,
+            color: BR.blood,
+          }}
+        >
+          [ERR] {(error as Error).message}
+        </p>
+      )}
 
       {data && (
         <>
+          {/* Hero Weight Card */}
+          <HeroWeight latestWeight={data.latest_weight} previousWeight={data.previous_weight} />
+
+          {/* Yesterday Summary */}
+          <Rule label="YESTERDAY · 24H" />
           <YesterdaySummary
             yesterday={yesterdayData}
             dayBefore={dayBeforeData}
             feedingEntries={yesterdayFeedings}
             diaperEntries={yesterdayDiapers}
-            latestWeight={data.latest_weight}
-            previousWeight={data.previous_weight}
           />
+
+          <Rule label="TOTALS · ALL-TIME" accent={BR.cyan} />
           <AllTimeTotals totals={data.all_time_totals} />
 
-          <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">Кормление (мл/день)</h2>
-            {days.length > 0 ? <FeedingChart days={days} /> : <EmptyState />}
-          </section>
+          <Rule label="INTAKE · VOLUME" />
+          <ChartArea>{days.length > 0 ? <FeedingChart days={days} /> : <EmptyState />}</ChartArea>
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
-              <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">Кормления по часам</h2>
+              <ChartArea>
                 <FeedingByHourChart entries={feedingData.entries} />
-              </section>
+              </ChartArea>
+
+              <Rule label="INTAKE · VELOCITY + GAPS" />
+              <ChartArea>
+                <FeedingSpeedChart entries={feedingData.entries} />
+                <FeedingGapChart entries={feedingData.entries} />
+              </ChartArea>
 
               {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
-                <section>
-                  <h2 className="text-sm font-medium text-gray-500 mb-2">
-                    Среднее потребление (мл/ч по дням)
-                  </h2>
-                  <DailyAvgBarChart
-                    data={computeDailyAvgFeedingSpeed(feedingData.entries)}
-                    color={COLORS.blue400}
-                    formatValue={(v) => Math.round(v).toString()}
-                  />
-                </section>
+                <>
+                  <SubKicker label="avg intake · ml/h" accent={BR.cyan} />
+                  <ChartArea>
+                    <DailyAvgBarChart
+                      data={computeDailyAvgFeedingSpeed(feedingData.entries)}
+                      color={COLORS.blue400}
+                      formatValue={(v) => Math.round(v).toString()}
+                    />
+                  </ChartArea>
+                </>
               )}
 
               {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
-                <section>
-                  <h2 className="text-sm font-medium text-gray-500 mb-2">
-                    Средний интервал кормления (ч/день)
-                  </h2>
-                  <DailyAvgBarChart
-                    data={computeDailyAvgFeedingInterval(feedingData.entries)}
-                    color={COLORS.amber400}
-                  />
-                </section>
+                <>
+                  <SubKicker label="avg feeding interval · h" />
+                  <ChartArea>
+                    <DailyAvgBarChart
+                      data={computeDailyAvgFeedingInterval(feedingData.entries)}
+                      color={COLORS.amber400}
+                    />
+                  </ChartArea>
+                </>
               )}
 
-              <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  Скорость кормления (мл/ч)
-                </h2>
-                <FeedingSpeedChart entries={feedingData.entries} />
-              </section>
-
-              <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">Интервал кормления (ч)</h2>
-                <FeedingGapChart entries={feedingData.entries} />
-              </section>
-
+              <Rule label="BREAST" accent={BR.rose} />
               {computeDailyAvgBreastInterval(feedingData.entries).length > 0 && (
-                <section>
-                  <h2 className="text-sm font-medium text-gray-500 mb-2">
-                    Средний интервал грудного вскармливания (ч/день)
-                  </h2>
-                  <DailyAvgBarChart
-                    data={computeDailyAvgBreastInterval(feedingData.entries)}
-                    color={COLORS.pink400}
-                  />
-                </section>
+                <>
+                  <SubKicker label="avg breast interval · h" accent={BR.rose} />
+                  <ChartArea>
+                    <DailyAvgBarChart
+                      data={computeDailyAvgBreastInterval(feedingData.entries)}
+                      color={COLORS.pink400}
+                    />
+                  </ChartArea>
+                </>
               )}
-
-              <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  Интервал грудного вскармливания (ч)
-                </h2>
+              <ChartArea>
                 <BreastGapChart entries={feedingData.entries} />
-              </section>
+              </ChartArea>
             </>
           )}
 
-          <section>
-            <h2 className="text-sm font-medium text-gray-500 mb-2">Подгузники (шт/день)</h2>
-            {days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}
-          </section>
+          <Rule label="DIAPERS" accent={BR.cyan} />
+          <ChartArea>{days.length > 0 ? <DiaperChart days={days} /> : <EmptyState />}</ChartArea>
 
           {diaperData && diaperData.entries.length > 0 && (
             <>
               {computeDailyAvgDiaperInterval(diaperData.entries).length > 0 && (
-                <section>
-                  <h2 className="text-sm font-medium text-gray-500 mb-2">
-                    Средний интервал подгузников (ч/день)
-                  </h2>
-                  <DailyAvgBarChart
-                    data={computeDailyAvgDiaperInterval(diaperData.entries)}
-                    color={COLORS.green400}
-                  />
-                </section>
+                <>
+                  <SubKicker label="avg diaper interval · h" accent={BR.cyan} />
+                  <ChartArea>
+                    <DailyAvgBarChart
+                      data={computeDailyAvgDiaperInterval(diaperData.entries)}
+                      color={COLORS.green400}
+                    />
+                  </ChartArea>
+                </>
               )}
 
-              <section>
-                <h2 className="text-sm font-medium text-gray-500 mb-2">
-                  Интервал пописов/покаков (ч)
-                </h2>
+              <ChartArea>
                 <DiaperGapChart entries={diaperData.entries} />
-              </section>
+              </ChartArea>
             </>
           )}
 
           {weightData && (weightData.entries.length >= 2 || profile.birth_weight) && (
-            <section>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Вес и нормы ВОЗ</h2>
-              <WeightChart
-                entries={weightData.entries}
-                birthDate={profile.birth_date}
-                birthWeight={profile.birth_weight}
-                sex={profile.sex}
-              />
-            </section>
+            <>
+              <Rule label="MASS · WHO NORMS" accent={BR.rose} />
+              <ChartArea>
+                <WeightChart
+                  entries={weightData.entries}
+                  birthDate={profile.birth_date}
+                  birthWeight={profile.birth_weight}
+                  sex={profile.sex}
+                />
+              </ChartArea>
+            </>
           )}
+
+          <div className="h-8" />
         </>
       )}
+    </>
+  )
+}
+
+function ChartArea({ children }: { children: React.ReactNode }) {
+  return <div className="px-5">{children}</div>
+}
+
+function SubKicker({ label, accent = BR.amber }: { label: string; accent?: string }) {
+  return (
+    <div
+      className="px-5 pt-2 pb-1 uppercase"
+      style={{
+        fontFamily: BR.mono,
+        fontSize: 9,
+        letterSpacing: 2,
+        color: accent,
+      }}
+    >
+      › {label}
     </div>
   )
 }
 
 function PeriodSelector({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
   return (
-    <div className="flex gap-2">
-      {PERIODS.map((p) => (
-        <button
-          key={p}
-          onClick={() => onChange(p)}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-            period === p ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {p} дн.
-        </button>
-      ))}
+    <div className="flex gap-2" style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2 }}>
+      {PERIODS.map((p) => {
+        const on = p === period
+        return (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className="uppercase"
+            style={{
+              padding: '8px 14px',
+              border: `1px solid ${on ? BR.amber : BR.line}`,
+              color: on ? BR.amber : BR.dim,
+              background: on ? 'rgba(255,179,71,0.08)' : 'transparent',
+              textShadow: on ? `0 0 8px ${BR.amberGlow}` : 'none',
+              minHeight: 40,
+            }}
+          >
+            {p}D
+          </button>
+        )
+      })}
+      <div className="flex-1" />
+      <div className="flex items-center gap-1.5 uppercase" style={{ color: BR.dim }}>
+        <span>LIVE</span>
+        <span
+          className="inline-block rounded-full"
+          style={{
+            width: 6,
+            height: 6,
+            background: BR.amber,
+            boxShadow: `0 0 8px ${BR.amberGlow}`,
+            animation: 'brPulse 1.4s infinite ease-in-out',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function HeroWeight({
+  latestWeight,
+  previousWeight,
+}: {
+  latestWeight: DashboardResponse['latest_weight']
+  previousWeight: DashboardResponse['previous_weight']
+}) {
+  if (!latestWeight) return null
+
+  const weightKg = (latestWeight.value / 1000).toFixed(2)
+  const diffG = previousWeight ? Math.round(latestWeight.value - previousWeight.value) : null
+  const diffPct =
+    previousWeight && previousWeight.value !== 0
+      ? Math.round(((latestWeight.value - previousWeight.value) / previousWeight.value) * 100)
+      : null
+
+  return (
+    <div className="px-5 mt-3">
+      <div
+        className="relative overflow-hidden"
+        style={{
+          padding: 20,
+          border: `1px solid ${BR.rose}`,
+          background: `radial-gradient(circle at 20% 0%, rgba(255,158,163,0.12), transparent 60%), ${BR.char}`,
+        }}
+      >
+        <div className="absolute top-0 right-0 bottom-0" style={{ width: '55%', opacity: 0.35 }}>
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 160 100"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="br-weight-grad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stopColor={BR.rose} stopOpacity="0.4" />
+                <stop offset="1" stopColor={BR.rose} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0 90 C20 88, 40 82, 60 72 S100 55, 130 40, 160 28"
+              stroke={BR.rose}
+              strokeWidth="1.5"
+              fill="none"
+            />
+            <path
+              d="M0 90 C20 88, 40 82, 60 72 S100 55, 130 40, 160 28 L160 100 L0 100 Z"
+              fill="url(#br-weight-grad)"
+            />
+            {[0, 30, 60, 90, 120, 150].map((x) => (
+              <circle key={x} cx={x} cy={90 - x * 0.42} r="1.5" fill={BR.rose} />
+            ))}
+          </svg>
+        </div>
+        <div className="relative">
+          <div
+            className="uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 9,
+              letterSpacing: 3,
+              color: BR.rose,
+            }}
+          >
+            MASS · CURRENT
+          </div>
+          <div className="flex items-baseline gap-2 mt-2">
+            <span
+              style={{
+                fontFamily: BR.display,
+                fontSize: 52,
+                fontWeight: 500,
+                letterSpacing: -2,
+                color: BR.text,
+                textShadow: `0 0 18px rgba(255,158,163,0.55)`,
+              }}
+            >
+              {weightKg}
+            </span>
+            <span
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 14,
+                color: BR.rose,
+                letterSpacing: 2,
+              }}
+            >
+              KG
+            </span>
+          </div>
+          <div
+            className="mt-1 uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 10,
+              letterSpacing: 1.5,
+              color: BR.dim,
+            }}
+          >
+            {diffG != null && (
+              <>
+                Δ {diffG >= 0 ? '+' : ''}
+                {diffG} g
+              </>
+            )}
+            {diffPct != null && (
+              <>
+                {' · '}
+                <span style={{ color: diffPct >= 0 ? BR.rose : BR.cyan }}>
+                  {diffPct >= 0 ? '▲' : '▼'} {Math.abs(diffPct)}%
+                </span>
+              </>
+            )}
+            {' · '}
+            <span>{formatDateRu(latestWeight.date)}</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -261,169 +458,113 @@ function pctChange(curr: number, prev: number): string | null {
   return pct >= 0 ? `+${pct}%` : `${pct}%`
 }
 
-function PctBadge({ value }: { value: string | null }) {
-  if (!value) return null
-  const isPositive = value.startsWith('+')
-  return (
-    <span className={`text-xs font-medium ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
-      {value}
-    </span>
-  )
-}
-
 function YesterdaySummary({
   yesterday,
   dayBefore,
   feedingEntries,
   diaperEntries,
-  latestWeight,
-  previousWeight,
 }: {
   yesterday: DashboardDay | null
   dayBefore: DashboardDay | null
   feedingEntries: Entry[]
   diaperEntries: Entry[]
-  latestWeight: DashboardResponse['latest_weight']
-  previousWeight: DashboardResponse['previous_weight']
 }) {
-  const weightKg = latestWeight
-    ? (latestWeight.value / 1000).toFixed(2).replace(/\.?0+$/, '')
-    : null
-  const weightDiffG =
-    latestWeight && previousWeight ? Math.round(latestWeight.value - previousWeight.value) : null
-  const weightDiffPct =
-    latestWeight && previousWeight ? pctChange(latestWeight.value, previousWeight.value) : null
-  const weightDiffStr =
-    weightDiffG != null ? (weightDiffG >= 0 ? `+${weightDiffG} г` : `${weightDiffG} г`) : null
-
-  if (!yesterday && !latestWeight) {
+  if (!yesterday) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Вчера</p>
-        <p className="text-gray-400 text-sm text-center">Нет данных</p>
+      <div className="px-5">
+        <div
+          className="text-center py-4 uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 10,
+            letterSpacing: 2,
+            color: BR.dim,
+            border: `1px solid ${BR.line}`,
+            background: BR.char,
+          }}
+        >
+          — no data for yesterday —
+        </div>
       </div>
     )
   }
 
-  const diaperTotal = yesterday
-    ? yesterday.diaper_pee_count + yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count
-    : 0
+  const diaperTotal =
+    yesterday.diaper_pee_count + yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count
   const diaperTotalPrev = dayBefore
     ? dayBefore.diaper_pee_count + dayBefore.diaper_poo_count + dayBefore.diaper_pee_poo_count
     : 0
-
-  const breastCount = feedingEntries.filter((e) => e.subtype === 'breast').length
-  const formulaCount = feedingEntries.filter((e) => e.subtype === 'formula').length
+  const wetCount = yesterday.diaper_pee_count + yesterday.diaper_pee_poo_count
+  const soilCount = yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count
 
   const feedingWithMl = feedingEntries.filter((e) => e.value != null && e.value > 0)
   const avgFeedingInterval = computeAvgInterval(feedingWithMl)
   const avgDiaperInterval = computeAvgInterval(diaperEntries)
-  const velocity = yesterday ? yesterday.feeding_total_ml / 24 : 0
+  const velocity = yesterday.feeding_total_ml / 24
 
-  const mlPct =
-    dayBefore && yesterday
-      ? pctChange(yesterday.feeding_total_ml, dayBefore.feeding_total_ml)
-      : null
+  const mlPct = dayBefore ? pctChange(yesterday.feeding_total_ml, dayBefore.feeding_total_ml) : null
   const diaperPct = dayBefore ? pctChange(diaperTotal, diaperTotalPrev) : null
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Вчера</p>
-
-      <div className="space-y-3">
-        {yesterday && (
-          <>
-            {/* Feedings */}
-            <div>
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold">{yesterday.feeding_count}</span>
-                  <span className="text-sm text-gray-600">кормлений</span>
-                  <span className="text-sm text-gray-400">
-                    {Math.round(yesterday.feeding_total_ml)} мл
-                  </span>
-                </div>
-                <PctBadge value={mlPct} />
-              </div>
-              <div className="flex gap-3 ml-4 text-sm text-gray-500">
-                <span>грудное {breastCount}</span>
-                <span>смесь {formulaCount}</span>
-              </div>
-            </div>
-
-            {/* Diapers */}
-            <div>
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold">{diaperTotal}</span>
-                  <span className="text-sm text-gray-600">подгузников</span>
-                </div>
-                <PctBadge value={diaperPct} />
-              </div>
-              <div className="flex gap-3 ml-4 text-sm text-gray-500">
-                <span>пописал {yesterday.diaper_pee_count + yesterday.diaper_pee_poo_count}</span>
-                <span>покакал {yesterday.diaper_poo_count + yesterday.diaper_pee_poo_count}</span>
-              </div>
-            </div>
-
-            {/* Intervals & velocity */}
-            <div className="pt-2 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-lg font-bold">
-                  {avgFeedingInterval != null ? avgFeedingInterval.toFixed(1) : '—'}
-                </p>
-                <p className="text-xs text-gray-500">инт. корм. (ч)</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold">
-                  {avgDiaperInterval != null ? avgDiaperInterval.toFixed(1) : '—'}
-                </p>
-                <p className="text-xs text-gray-500">инт. подг. (ч)</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold">{velocity > 0 ? velocity.toFixed(1) : '—'}</p>
-                <p className="text-xs text-gray-500">мл/ч</p>
-              </div>
-            </div>
-          </>
-        )}
-
-        {!yesterday && <p className="text-gray-400 text-sm text-center">Нет данных за вчера</p>}
-
-        {/* Weight */}
-        {latestWeight && (
-          <div className="pt-2 border-t border-gray-100">
-            <div className="flex items-baseline justify-between">
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold">{weightKg} кг</span>
-                <span className="text-xs text-gray-400">{formatDateRu(latestWeight.date)}</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                {weightDiffStr && <span className="text-xs text-gray-500">{weightDiffStr}</span>}
-                <PctBadge value={weightDiffPct} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+    <div className="px-5 grid grid-cols-2 gap-3">
+      <ReadoutTile
+        label="FEEDINGS"
+        value={yesterday.feeding_count}
+        unit={`× · ${Math.round(yesterday.feeding_total_ml)}ml`}
+        note={mlPct ? `ml change: ${mlPct}` : undefined}
+      />
+      <ReadoutTile
+        label="DIAPERS"
+        value={diaperTotal}
+        unit="×"
+        accent={BR.cyan}
+        note={diaperPct ? `Δ ${diaperPct}` : `W ${wetCount} · S ${soilCount}`}
+      />
+      <ReadoutTile
+        label="FEED INT"
+        value={avgFeedingInterval != null ? avgFeedingInterval.toFixed(1) : '—'}
+        unit="h"
+        note="avg interval"
+      />
+      <ReadoutTile
+        label="VELOCITY"
+        value={velocity > 0 ? velocity.toFixed(1) : '—'}
+        unit="ml/h"
+        accent={BR.cyan}
+        note="24h average"
+      />
+      {avgDiaperInterval != null && (
+        <ReadoutTile
+          label="DIAPER INT"
+          value={avgDiaperInterval.toFixed(1)}
+          unit="h"
+          accent={BR.cyan}
+          note="wet+soil"
+        />
+      )}
     </div>
   )
 }
 
 function EmptyState() {
-  return <p className="text-gray-400 text-sm text-center py-8">Нет данных</p>
+  return (
+    <p
+      className="text-center py-6 uppercase"
+      style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+    >
+      — no data —
+    </p>
+  )
 }
 
 function nextBeautifulNumber(n: number): number {
   const candidates: number[] = []
-  // Round numbers: 50, 100, 200, ..., 900, 1000, 2000, ...
   candidates.push(50)
   for (let base = 100; base <= 100000; base *= 10) {
     for (let mult = 1; mult <= 9; mult++) {
       candidates.push(base * mult)
     }
   }
-  // Repeating digits: 111, 222, ..., 999, 1111, 2222, ..., 9999, ...
   for (let digits = 3; digits <= 5; digits++) {
     const unit = Number('1'.repeat(digits))
     for (let mult = 1; mult <= 9; mult++) {
@@ -439,12 +580,12 @@ const THRESHOLD = 3
 function AllTimeTotals({ totals }: { totals: AllTimeTotalsData | null }) {
   if (!totals) return null
 
-  const stats: { label: string; value: number; sub?: string }[] = [
-    { label: 'Подгузники', value: totals.diaper_total },
-    { label: 'пописал', value: totals.diaper_pee, sub: 'sub' },
-    { label: 'покакал', value: totals.diaper_poo, sub: 'sub' },
-    { label: 'Грудное', value: totals.feeding_breast },
-    { label: 'Смесь', value: totals.feeding_formula },
+  const stats = [
+    { label: 'DIAPERS', value: totals.diaper_total, accent: BR.cyan },
+    { label: 'WET', value: totals.diaper_pee, accent: BR.cyan },
+    { label: 'SOIL', value: totals.diaper_poo, accent: BR.stool },
+    { label: 'BREAST', value: totals.feeding_breast, accent: BR.rose },
+    { label: 'FORMULA', value: totals.feeding_formula, accent: BR.amber },
   ]
 
   const hints: string[] = []
@@ -452,47 +593,37 @@ function AllTimeTotals({ totals }: { totals: AllTimeTotalsData | null }) {
     const next = nextBeautifulNumber(s.value)
     const remaining = next - s.value
     if (remaining <= THRESHOLD) {
-      hints.push(`до ${next} ${s.label.toLowerCase()}: ${remaining === 0 ? 'сейчас!' : remaining}`)
+      hints.push(
+        `${s.label.toLowerCase()} → ${next}: ${remaining === 0 ? 'milestone!' : `${remaining} to go`}`,
+      )
     }
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">Всего за всё время</p>
-
-      <div className="space-y-2">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold">{totals.diaper_total}</span>
-            <span className="text-sm text-gray-600">подгузников</span>
-          </div>
-          <div className="flex gap-4 ml-4 text-sm text-gray-500">
-            <span>пописал {totals.diaper_pee}</span>
-            <span>покакал {totals.diaper_poo}</span>
-          </div>
-        </div>
-
-        <div className="flex gap-6">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold">{totals.feeding_breast}</span>
-            <span className="text-sm text-gray-600">грудное</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold">{totals.feeding_formula}</span>
-            <span className="text-sm text-gray-600">смесь</span>
-          </div>
-        </div>
+    <>
+      <div className="px-5 grid grid-cols-2 gap-3">
+        {stats.map((s) => (
+          <ReadoutTile key={s.label} label={s.label} value={s.value} accent={s.accent} />
+        ))}
       </div>
-
       {hints.length > 0 && (
-        <div className="mt-3 pt-2 border-t border-gray-100">
-          {hints.map((hint) => (
-            <p key={hint} className="text-xs text-amber-600 font-medium">
-              {hint}
-            </p>
+        <div
+          className="mx-5 mt-2 px-3 py-2 uppercase"
+          style={{
+            border: `1px solid ${BR.amber}`,
+            background: 'rgba(255,179,71,0.06)',
+            fontFamily: BR.mono,
+            fontSize: 10,
+            letterSpacing: 1.5,
+            color: BR.amber,
+            textShadow: `0 0 8px ${BR.amberGlow}`,
+          }}
+        >
+          {hints.map((h) => (
+            <div key={h}>› {h}</div>
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }

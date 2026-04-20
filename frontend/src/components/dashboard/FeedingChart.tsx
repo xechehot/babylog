@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Bar } from 'react-chartjs-2'
 import type { DashboardDay } from '../../types'
-import { baseBarOptions, formatDateTickRu, COLORS } from './chartConfig'
+import { baseBarOptions, formatDateTickRu, BR_CHART } from './chartConfig'
+import { ChartCard } from '../br/ChartCard'
+import { Pill } from '../br/Pill'
+import { LegendRow } from '../br/LegendRow'
 
 interface FeedingChartProps {
   days: DashboardDay[]
@@ -11,7 +14,6 @@ export function FeedingChart({ days }: FeedingChartProps) {
   const [breakdown, setBreakdown] = useState(true)
 
   const count = days.length
-  if (count === 0) return null
 
   const chartData = useMemo(() => {
     const labels = days.map((d) => formatDateTickRu(d.date))
@@ -21,16 +23,19 @@ export function FeedingChart({ days }: FeedingChartProps) {
         labels,
         datasets: [
           {
-            label: 'Всего',
+            label: 'Total',
             data: days.map((d) => d.feeding_total_ml),
-            backgroundColor: COLORS.blue400,
-            borderRadius: 3,
+            backgroundColor: BR_CHART.amberFill,
+            borderColor: BR_CHART.amber,
+            borderWidth: 1.5,
+            borderRadius: 0,
+            borderSkipped: false,
             datalabels: {
               display: (ctx: { dataIndex: number }) => days[ctx.dataIndex].feeding_total_ml > 0,
               anchor: 'end' as const,
               align: 'top' as const,
-              color: '#6b7280',
-              font: { size: 10 },
+              color: BR_CHART.amber,
+              font: { family: '"JetBrains Mono"', size: 9, weight: 500 },
               formatter: (v: number) => Math.round(v).toString(),
             },
           },
@@ -42,23 +47,29 @@ export function FeedingChart({ days }: FeedingChartProps) {
       labels,
       datasets: [
         {
-          label: 'грудь',
+          label: 'breast',
           data: days.map((d) => d.feeding_breast_ml),
-          backgroundColor: COLORS.purple400,
-          borderRadius: 3,
+          backgroundColor: BR_CHART.cyanFill,
+          borderColor: BR_CHART.cyan,
+          borderWidth: 1.5,
+          borderRadius: 0,
+          borderSkipped: false,
           datalabels: { display: false },
         },
         {
-          label: 'смесь',
+          label: 'formula',
           data: days.map((d) => d.feeding_formula_ml),
-          backgroundColor: COLORS.blue400,
-          borderRadius: 3,
+          backgroundColor: BR_CHART.amberFill,
+          borderColor: BR_CHART.amber,
+          borderWidth: 1.5,
+          borderRadius: 0,
+          borderSkipped: false,
           datalabels: {
             display: (ctx: { dataIndex: number }) => days[ctx.dataIndex].feeding_total_ml > 0,
             anchor: 'end' as const,
             align: 'top' as const,
-            color: '#6b7280',
-            font: { size: 10 },
+            color: BR_CHART.amber,
+            font: { family: '"JetBrains Mono"', size: 9, weight: 500 },
             formatter: (_v: number, ctx: { dataIndex: number }) =>
               Math.round(days[ctx.dataIndex].feeding_total_ml).toString(),
           },
@@ -69,17 +80,11 @@ export function FeedingChart({ days }: FeedingChartProps) {
 
   const options = useMemo(() => {
     const opts = baseBarOptions()
-    opts.layout = { padding: { top: 20 } }
+    opts.layout = { padding: { top: 22 } }
     opts.scales = {
       ...opts.scales,
-      x: {
-        ...opts.scales!.x,
-        stacked: breakdown,
-      },
-      y: {
-        ...opts.scales!.y,
-        stacked: breakdown,
-      },
+      x: { ...opts.scales!.x, stacked: breakdown },
+      y: { ...opts.scales!.y, stacked: breakdown },
     }
     if (breakdown) {
       opts.plugins = {
@@ -93,7 +98,7 @@ export function FeedingChart({ days }: FeedingChartProps) {
               const day = days[idx]
               if (day.feeding_breast_ml > 0) {
                 const pct = Math.round((day.feeding_breast_ml / day.feeding_total_ml) * 100)
-                return `грудь: ${pct}%`
+                return `breast: ${pct}%`
               }
               return ''
             },
@@ -104,35 +109,37 @@ export function FeedingChart({ days }: FeedingChartProps) {
     return opts
   }, [days, breakdown])
 
+  if (count === 0) return null
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <div className="flex items-center justify-between mb-1 ml-1">
-        {breakdown ? (
-          <div className="flex gap-3">
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm bg-blue-400" />
-              смесь
-            </span>
-            <span className="flex items-center gap-1 text-xs text-gray-500">
-              <span className="inline-block w-2.5 h-2.5 rounded-sm bg-purple-400" />
-              грудь
-            </span>
-          </div>
-        ) : (
-          <div />
-        )}
-        <button
-          onClick={() => setBreakdown((v) => !v)}
-          className={`text-xs px-2 py-0.5 rounded-full border ${
+    <ChartCard
+      kicker="BAR · VOLUME"
+      title="Feeding / day"
+      subtitle="breast milk vs formula, ml"
+      toolbar={
+        <>
+          <Pill active={breakdown} onClick={() => setBreakdown(true)}>
             breakdown
-              ? 'bg-blue-50 border-blue-300 text-blue-600'
-              : 'bg-gray-50 border-gray-300 text-gray-500'
-          }`}
-        >
-          разбивка
-        </button>
-      </div>
+          </Pill>
+          <Pill active={!breakdown} onClick={() => setBreakdown(false)}>
+            total
+          </Pill>
+        </>
+      }
+      footer={
+        <LegendRow
+          items={
+            breakdown
+              ? [
+                  { color: BR_CHART.cyan, label: 'breast' },
+                  { color: BR_CHART.amber, label: 'formula' },
+                ]
+              : [{ color: BR_CHART.amber, label: 'total ml' }]
+          }
+        />
+      }
+    >
       <Bar data={chartData} options={options} />
-    </div>
+    </ChartCard>
   )
 }
