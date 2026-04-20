@@ -314,11 +314,12 @@ function PeriodSelector({
   const initialTo = custom ? selection.to : today
 
   function setCustom(from: string, to: string) {
-    // Clamp `to` to today.
-    const clampedTo = to > today ? today : to
-    // Require non-empty; require from <= to.
-    if (!from || !clampedTo || from > clampedTo) return
-    onChange({ kind: 'custom', from, to: clampedTo })
+    if (!from || !to) return
+    let f = from > today ? today : from
+    let t = to > today ? today : to
+    // Auto-swap so either endpoint can be edited first regardless of order.
+    if (f > t) [f, t] = [t, f]
+    onChange({ kind: 'custom', from: f, to: t })
   }
 
   return (
@@ -387,7 +388,7 @@ function PeriodSelector({
           <input
             type="date"
             value={selection.from}
-            max={selection.to}
+            max={today}
             onChange={(e) => setCustom(e.target.value, selection.to)}
             style={{
               padding: '6px 10px',
@@ -403,7 +404,6 @@ function PeriodSelector({
           <input
             type="date"
             value={selection.to}
-            min={selection.from}
             max={today}
             onChange={(e) => setCustom(selection.from, e.target.value)}
             style={{
