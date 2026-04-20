@@ -3,6 +3,7 @@ import mimetypes
 import time
 from pathlib import Path
 
+from app.config import settings
 from app.database import get_db
 from app.services.llm import LLMService
 
@@ -31,6 +32,8 @@ async def process_upload(upload_id: int) -> None:
 
         # Read image file
         image_path = Path(filepath)
+        if not image_path.exists():
+            image_path = Path(settings.upload_dir) / image_path.name
         if not image_path.exists():
             raise FileNotFoundError(f"Image file not found: {filepath}")
         image_bytes = image_path.read_bytes()
