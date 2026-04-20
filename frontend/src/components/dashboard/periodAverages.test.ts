@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getLoggedDays, pooledAvgGapHours } from './periodAverages'
-import type { Entry } from '../../types'
+import { getLoggedDays, pooledAvgGapHours, computePeriodAverages } from './periodAverages'
+import type { Entry, DashboardDay } from '../../types'
 
 function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type: Entry['entry_type'] }): Entry {
   return {
@@ -112,5 +112,120 @@ describe('pooledAvgGapHours', () => {
       { occurred_at: '2026-03-01T10:00:00' },
     ])
     expect(result).toBeCloseTo(3, 5)
+  })
+})
+
+describe('computePeriodAverages', () => {
+  function makeDay(overrides: Partial<DashboardDay> & { date: string }): DashboardDay {
+    return {
+      date: overrides.date,
+      feeding_total_ml: overrides.feeding_total_ml ?? 0,
+      feeding_count: overrides.feeding_count ?? 0,
+      feeding_breast_ml: overrides.feeding_breast_ml ?? 0,
+      feeding_formula_ml: overrides.feeding_formula_ml ?? 0,
+      diaper_pee_count: overrides.diaper_pee_count ?? 0,
+      diaper_poo_count: overrides.diaper_poo_count ?? 0,
+      diaper_dry_count: overrides.diaper_dry_count ?? 0,
+      diaper_pee_poo_count: overrides.diaper_pee_poo_count ?? 0,
+    }
+  }
+
+  it('returns all nulls when no logged days', () => {
+    const result = computePeriodAverages({
+      days: [],
+      feedingEntries: [],
+      diaperEntries: [],
+      from: '2026-03-01',
+      to: '2026-03-07',
+    })
+    expect(result).toEqual({
+      loggedDayCount: 0,
+      mlPerDay: null,
+      breastPerDay: null,
+      formulaPerDay: null,
+      wetPerDay: null,
+      soilPerDay: null,
+      feedingInterval: null,
+      breastInterval: null,
+      formulaInterval: null,
+      diaperInterval: null,
+    })
+  })
+
+  it('computes per-day averages divided by logged-day count', () => {
+    const feedings = [
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T12:00:00', value: 50 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-02T08:00:00', value: 120 }),
+    ]
+    const diapers = [
+      makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-01T10:00:00' }),
+      makeEntry({ entry_type: 'diaper', subtype: 'pee+poo', occurred_at: '2026-03-01T14:00:00' }),
+      makeEntry({ entry_type: 'diaper', subtype: 'poo', occurred_at: '2026-03-02T10:00:00' }),
+      makeEntry({ entry_type: 'diaper', subtype: 'dry', occurred_at: '2026-03-02T12:00:00' }),
+    ]
+    const days = [
+      makeDay({ date: '2026-03-01', feeding_total_ml: 150 }),
+      makeDay({ date: '2026-03-02', feeding_total_ml: 120 }),
+    ]
+    const result = computePeriodAverages({
+      days,
+      feedingEntries: feedings,
+      diaperEntries: diapers,
+      from: '2026-03-01',
+      to: '2026-03-07',
+    })
+    expect(result.loggedDayCount).toBe(2)
+    expect(result.mlPerDay).toBeCloseTo(135, 5) // (150+120)/2
+    expect(result.breastPerDay).toBeCloseTo(1, 5) // 2 breast / 2 days
+    expect(result.formulaPerDay).toBeCloseTo(0.5, 5) // 1 formula / 2 days
+    expect(result.wetPerDay).toBeCloseTo(1, 5) // pee + pee+poo = 2 / 2 days
+    expect(result.soilPerDay).toBeCloseTo(1, 5) // poo + pee+poo = 2 / 2 days
+  })
+
+  it('restricts sums to entries in [from,to] range', () => {
+    const feedings = [
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-02-28T08:00:00', value: 9999 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
+    ]
+    const days = [makeDay({ date: '2026-03-01', feeding_total_ml: 100 })]
+    const result = computePeriodAverages({
+      days,
+      feedingEntries: feedings,
+      diaperEntries: [],
+      from: '2026-03-01',
+      to: '2026-03-07',
+    })
+    expect(result.loggedDayCount).toBe(1)
+    expect(result.mlPerDay).toBeCloseTo(100, 5)
+    expect(result.breastPerDay).toBeCloseTo(1, 5)
+  })
+
+  it('computes pooled intervals for each subset', () => {
+    const feedings = [
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T10:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T14:00:00' }),
+    ]
+    const diapers = [
+      makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-01T08:00:00' }),
+      makeEntry({ entry_type: 'diaper', subtype: 'dry', occurred_at: '2026-03-01T09:00:00' }),
+      makeEntry({ entry_type: 'diaper', subtype: 'poo', occurred_at: '2026-03-01T11:00:00' }),
+    ]
+    const result = computePeriodAverages({
+      days: [makeDay({ date: '2026-03-01' })],
+      feedingEntries: feedings,
+      diaperEntries: diapers,
+      from: '2026-03-01',
+      to: '2026-03-07',
+    })
+    // All feedings: gaps [2, 4] => avg 3
+    expect(result.feedingInterval).toBeCloseTo(3, 5)
+    // Breast only: 08 -> 14 => single 6h gap
+    expect(result.breastInterval).toBeCloseTo(6, 5)
+    // Formula only: one entry => null
+    expect(result.formulaInterval).toBeNull()
+    // Diapers, excluding dry: 08 -> 11 => single 3h gap
+    expect(result.diaperInterval).toBeCloseTo(3, 5)
   })
 })

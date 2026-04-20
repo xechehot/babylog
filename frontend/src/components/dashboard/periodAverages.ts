@@ -1,4 +1,25 @@
-import type { Entry } from '../../types'
+import type { Entry, DashboardDay } from '../../types'
+
+export interface PeriodAveragesInput {
+  days: DashboardDay[]
+  feedingEntries: Entry[]
+  diaperEntries: Entry[]
+  from: string
+  to: string
+}
+
+export interface PeriodAveragesResult {
+  loggedDayCount: number
+  mlPerDay: number | null
+  breastPerDay: number | null
+  formulaPerDay: number | null
+  wetPerDay: number | null
+  soilPerDay: number | null
+  feedingInterval: number | null
+  breastInterval: number | null
+  formulaInterval: number | null
+  diaperInterval: number | null
+}
 
 export function getLoggedDays(
   feedingEntries: Entry[],
@@ -30,4 +51,57 @@ export function pooledAvgGapHours(entries: { occurred_at: string }[]): number | 
   }
   if (gaps.length === 0) return null
   return gaps.reduce((s, g) => s + g, 0) / gaps.length
+}
+
+export function computePeriodAverages(input: PeriodAveragesInput): PeriodAveragesResult {
+  const { days, feedingEntries, diaperEntries, from, to } = input
+  const loggedDays = getLoggedDays(feedingEntries, diaperEntries, from, to)
+  const n = loggedDays.size
+
+  const inRange = (e: Entry) => e.date >= from && e.date <= to
+  const feedingsInRange = feedingEntries.filter(inRange)
+  const diapersInRange = diaperEntries.filter(inRange)
+  const daysInRange = days.filter((d) => d.date >= from && d.date <= to)
+
+  if (n === 0) {
+    return {
+      loggedDayCount: 0,
+      mlPerDay: null,
+      breastPerDay: null,
+      formulaPerDay: null,
+      wetPerDay: null,
+      soilPerDay: null,
+      feedingInterval: null,
+      breastInterval: null,
+      formulaInterval: null,
+      diaperInterval: null,
+    }
+  }
+
+  const mlTotal = daysInRange.reduce((s, d) => s + d.feeding_total_ml, 0)
+  const breastCount = feedingsInRange.filter((e) => e.subtype === 'breast').length
+  const formulaCount = feedingsInRange.filter((e) => e.subtype === 'formula').length
+  const wetCount = diapersInRange.filter(
+    (e) => e.subtype === 'pee' || e.subtype === 'pee+poo',
+  ).length
+  const soilCount = diapersInRange.filter(
+    (e) => e.subtype === 'poo' || e.subtype === 'pee+poo',
+  ).length
+
+  const breastEntries = feedingsInRange.filter((e) => e.subtype === 'breast')
+  const formulaEntries = feedingsInRange.filter((e) => e.subtype === 'formula')
+  const nonDryDiapers = diapersInRange.filter((e) => e.subtype !== 'dry')
+
+  return {
+    loggedDayCount: n,
+    mlPerDay: mlTotal / n,
+    breastPerDay: breastCount / n,
+    formulaPerDay: formulaCount / n,
+    wetPerDay: wetCount / n,
+    soilPerDay: soilCount / n,
+    feedingInterval: pooledAvgGapHours(feedingsInRange),
+    breastInterval: pooledAvgGapHours(breastEntries),
+    formulaInterval: pooledAvgGapHours(formulaEntries),
+    diaperInterval: pooledAvgGapHours(nonDryDiapers),
+  }
 }
