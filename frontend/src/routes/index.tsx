@@ -112,7 +112,7 @@ function UploadPage() {
         kicker="INGEST · HANDWRITING → STRUCT"
         title={
           <>
-            Сканиро<span style={{ color: BR.amber }}>вание</span>
+            Scan<span style={{ color: BR.amber }}>ning</span>
           </>
         }
         meta={[
@@ -189,7 +189,7 @@ function UploadPage() {
               lineHeight: 1.3,
             }}
           >
-            «Нажмите, чтобы загрузить страницу из блокнота»
+            «Tap to upload a page from your notebook»
           </div>
           {/* bracket corners */}
           {(['tl', 'tr', 'bl', 'br'] as const).map((k) => (
@@ -286,7 +286,7 @@ function UploadPage() {
                     background: BR.char2,
                     border: `1px solid ${BR.line}`,
                   }}
-                  aria-label="Открыть"
+                  aria-label="Open"
                 >
                   <div
                     className="absolute"

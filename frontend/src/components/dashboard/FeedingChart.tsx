@@ -23,7 +23,7 @@ export function FeedingChart({ days }: FeedingChartProps) {
         labels,
         datasets: [
           {
-            label: 'Всего',
+            label: 'Total',
             data: days.map((d) => d.feeding_total_ml),
             backgroundColor: BR_CHART.amberFill,
             borderColor: BR_CHART.amber,
@@ -47,7 +47,7 @@ export function FeedingChart({ days }: FeedingChartProps) {
       labels,
       datasets: [
         {
-          label: 'грудь',
+          label: 'breast',
           data: days.map((d) => d.feeding_breast_ml),
           backgroundColor: BR_CHART.cyanFill,
           borderColor: BR_CHART.cyan,
@@ -57,7 +57,7 @@ export function FeedingChart({ days }: FeedingChartProps) {
           datalabels: { display: false },
         },
         {
-          label: 'смесь',
+          label: 'formula',
           data: days.map((d) => d.feeding_formula_ml),
           backgroundColor: BR_CHART.amberFill,
           borderColor: BR_CHART.amber,
@@ -98,7 +98,7 @@ export function FeedingChart({ days }: FeedingChartProps) {
               const day = days[idx]
               if (day.feeding_breast_ml > 0) {
                 const pct = Math.round((day.feeding_breast_ml / day.feeding_total_ml) * 100)
-                return `грудь: ${pct}%`
+                return `breast: ${pct}%`
               }
               return ''
             },
@@ -115,14 +115,14 @@ export function FeedingChart({ days }: FeedingChartProps) {
     <ChartCard
       kicker="BAR · VOLUME"
       title="Feeding / day"
-      subtitle="мл грудного молока и смеси"
+      subtitle="breast milk vs formula, ml"
       toolbar={
         <>
           <Pill active={breakdown} onClick={() => setBreakdown(true)}>
-            разбивка
+            breakdown
           </Pill>
           <Pill active={!breakdown} onClick={() => setBreakdown(false)}>
-            всего
+            total
           </Pill>
         </>
       }
@@ -131,10 +131,10 @@ export function FeedingChart({ days }: FeedingChartProps) {
           items={
             breakdown
               ? [
-                  { color: BR_CHART.cyan, label: 'грудь · breast' },
-                  { color: BR_CHART.amber, label: 'смесь · formula' },
+                  { color: BR_CHART.cyan, label: 'breast' },
+                  { color: BR_CHART.amber, label: 'formula' },
                 ]
-              : [{ color: BR_CHART.amber, label: 'всего · total ml' }]
+              : [{ color: BR_CHART.amber, label: 'total ml' }]
           }
         />
       }

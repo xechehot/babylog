@@ -58,7 +58,7 @@ export function FeedingSpeedChart({ entries }: FeedingSpeedChartProps) {
     labels,
     datasets: [
       {
-        label: 'мл/ч',
+        label: 'ml/h',
         data: points.map((p) => p.speed),
         showLine: false,
         pointRadius: 3.5,
@@ -92,7 +92,7 @@ export function FeedingSpeedChart({ entries }: FeedingSpeedChartProps) {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => {
             const v = (ctx.parsed.y ?? 0).toFixed(1)
-            return ctx.datasetIndex === 0 ? `${v} мл/ч` : `MA: ${v} мл/ч`
+            return ctx.datasetIndex === 0 ? `${v} ml/h` : `MA: ${v} ml/h`
           },
         },
       },
@@ -103,7 +103,7 @@ export function FeedingSpeedChart({ entries }: FeedingSpeedChartProps) {
     <ChartCard
       kicker="LINE · VELOCITY"
       title="Intake velocity"
-      subtitle="мл в час"
+      subtitle="ml per hour"
       footer={
         <LegendRow
           items={[

@@ -91,7 +91,7 @@ function DashboardPage() {
         kicker="VITALS · INDEX"
         title={
           <>
-            Показа<span style={{ color: BR.amber }}>тели</span>
+            Vital <span style={{ color: BR.amber }}>Index</span>
           </>
         }
         meta={[
@@ -110,7 +110,7 @@ function DashboardPage() {
           className="text-center py-8 uppercase"
           style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
         >
-          Загрузка…
+          Loading…
         </p>
       )}
       {isError && (
@@ -161,7 +161,7 @@ function DashboardPage() {
 
               {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
                 <>
-                  <SubKicker label="avg intake · мл/ч" accent={BR.cyan} />
+                  <SubKicker label="avg intake · ml/h" accent={BR.cyan} />
                   <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgFeedingSpeed(feedingData.entries)}
@@ -174,7 +174,7 @@ function DashboardPage() {
 
               {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
                 <>
-                  <SubKicker label="avg feeding interval · ч" />
+                  <SubKicker label="avg feeding interval · h" />
                   <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgFeedingInterval(feedingData.entries)}
@@ -187,7 +187,7 @@ function DashboardPage() {
               <Rule label="BREAST" accent={BR.rose} />
               {computeDailyAvgBreastInterval(feedingData.entries).length > 0 && (
                 <>
-                  <SubKicker label="avg breast interval · ч" accent={BR.rose} />
+                  <SubKicker label="avg breast interval · h" accent={BR.rose} />
                   <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgBreastInterval(feedingData.entries)}
@@ -209,7 +209,7 @@ function DashboardPage() {
             <>
               {computeDailyAvgDiaperInterval(diaperData.entries).length > 0 && (
                 <>
-                  <SubKicker label="avg diaper interval · ч" accent={BR.cyan} />
+                  <SubKicker label="avg diaper interval · h" accent={BR.cyan} />
                   <ChartArea>
                     <DailyAvgBarChart
                       data={computeDailyAvgDiaperInterval(diaperData.entries)}

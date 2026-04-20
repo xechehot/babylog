@@ -1,5 +1,5 @@
 import type { ChartOptions } from 'chart.js'
-import { MONTH_SHORT_RU } from './utils'
+import { MONTH_SHORT } from './utils'
 
 // Blade Runner neo-noir Chart.js theme.
 // Series palette exported as BR_CHART so individual charts stay consistent.
@@ -52,7 +52,7 @@ const TICK_FONT = {
 
 export function formatDateTickRu(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
-  return `${d.getDate()} ${MONTH_SHORT_RU[d.getMonth()]}`
+  return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`
 }
 
 export function baseBarOptions(): ChartOptions<'bar'> {

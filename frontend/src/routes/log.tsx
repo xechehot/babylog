@@ -6,8 +6,8 @@ import type { Entry, EntryType } from '../types'
 import { getDateRange, getTodayStr, formatDateRuFull } from '../components/dashboard/utils'
 import { BottomSheet } from '../components/BottomSheet'
 import {
-  TYPE_LABELS_RU,
-  SUBTYPE_LABELS_RU,
+  TYPE_LABELS,
+  SUBTYPE_LABELS,
   FEEDING_SUBTYPES,
   DIAPER_SUBTYPES,
 } from '../components/entry/constants'
@@ -103,7 +103,7 @@ function LogPage() {
         kicker="TIMELINE · UNIT 04-RZ"
         title={
           <>
-            Журнал <span style={{ color: BR.amber, fontStyle: 'italic' }}>отклика</span>
+            Response <span style={{ color: BR.amber, fontStyle: 'italic' }}>log</span>
           </>
         }
         meta={[`${entries.length} ENTRIES`, `${sortedDates.length} DAYS`, `RANGE ${rangeDays}D`]}
@@ -152,7 +152,7 @@ function LogPage() {
             className="text-center mt-8 uppercase"
             style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
           >
-            Загрузка…
+            Loading…
           </p>
         )}
 
@@ -161,7 +161,7 @@ function LogPage() {
             className="text-center mt-8 uppercase"
             style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
           >
-            Нет записей за выбранный период
+            No entries for this period
           </p>
         )}
 
@@ -187,7 +187,7 @@ function LogPage() {
                       onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
                       onCancel={() => setEditingId(null)}
                       onDelete={() => {
-                        if (confirm('Удалить запись?')) {
+                        if (confirm('Delete this entry?')) {
                           deleteMutation.mutate(entry.id)
                           setEditingId(null)
                         }
@@ -236,7 +236,7 @@ function LogPage() {
           setSheetOpen(true)
           setEditingId(null)
         }}
-        aria-label="Добавить запись"
+        aria-label="Add entry"
         className="fixed z-30 flex items-center justify-center"
         style={{
           right: 22,
@@ -255,7 +255,7 @@ function LogPage() {
         ＋
       </button>
 
-      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="НОВАЯ ЗАПИСЬ">
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="NEW ENTRY">
         <EntryForm
           isSaving={createMutation.isPending}
           onSave={(data) => createMutation.mutate(data)}
@@ -363,11 +363,11 @@ const DayHeader = forwardRef<
 ))
 DayHeader.displayName = 'DayHeader'
 
-const WEEKDAYS_RU = ['ВОСКР', 'ПОНЕД', 'ВТОРНИК', 'СРЕДА', 'ЧЕТВЕРГ', 'ПЯТНИЦА', 'СУББОТА']
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
 function formatWeekday(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
-  return WEEKDAYS_RU[d.getDay()] ?? ''
+  return WEEKDAYS[d.getDay()] ?? ''
 }
 
 function EntryRow({ entry, onTap }: { entry: Entry; onTap: () => void }) {
@@ -527,7 +527,7 @@ function InlineEditForm({
             else setEditSubtype('')
           }}
         >
-          {Object.entries(TYPE_LABELS_RU).map(([val, label]) => (
+          {Object.entries(TYPE_LABELS).map(([val, label]) => (
             <option key={val} value={val}>
               {label}
             </option>
@@ -541,7 +541,7 @@ function InlineEditForm({
           >
             {FEEDING_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -554,7 +554,7 @@ function InlineEditForm({
           >
             {DIAPER_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -580,14 +580,14 @@ function InlineEditForm({
           style={inputStyle}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          placeholder="Значение"
+          placeholder="Value"
         />
         <input
           type="text"
           style={inputStyle}
           value={editNotes}
           onChange={(e) => setEditNotes(e.target.value)}
-          placeholder="Заметки"
+          placeholder="Notes"
         />
       </div>
       <div className="flex gap-2 mt-3">
@@ -700,7 +700,7 @@ function EntryForm({
             else setSubtype('')
           }}
         >
-          {Object.entries(TYPE_LABELS_RU).map(([val, label]) => (
+          {Object.entries(TYPE_LABELS).map(([val, label]) => (
             <option key={val} value={val}>
               {label}
             </option>
@@ -710,7 +710,7 @@ function EntryForm({
           <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {FEEDING_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -719,7 +719,7 @@ function EntryForm({
           <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {DIAPER_SUBTYPES.map((s) => (
               <option key={s} value={s}>
-                {SUBTYPE_LABELS_RU[s]}
+                {SUBTYPE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -746,14 +746,14 @@ function EntryForm({
           style={inputStyle}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Значение"
+          placeholder="Value"
         />
         <input
           type="text"
           style={inputStyle}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Заметки"
+          placeholder="Notes"
         />
       </div>
       <button
@@ -781,7 +781,7 @@ function EntryForm({
           opacity: !occurredAt || isSaving ? 0.5 : 1,
         }}
       >
-        {isSaving ? 'SAVING…' : '[ СОХРАНИТЬ ]'}
+        {isSaving ? 'SAVING…' : '[ SAVE ]'}
       </button>
     </div>
   )

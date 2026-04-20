@@ -68,21 +68,21 @@ export function FeedingByHourChart({ entries }: FeedingByHourChartProps) {
     <ChartCard
       kicker="BAR · 24H DISTRIBUTION"
       title="Feeding by hour"
-      subtitle="когда малыш просит есть"
+      subtitle="when feedings happen"
       toolbar={
         <>
           <Pill active={filter === 'all'} onClick={() => setFilter('all')}>
-            все
+            all
           </Pill>
           <Pill
             active={filter === 'breast'}
             onClick={() => setFilter('breast')}
             accent={BR_CHART.cyan}
           >
-            грудь
+            breast
           </Pill>
           <Pill active={filter === 'formula'} onClick={() => setFilter('formula')}>
-            смесь
+            formula
           </Pill>
         </>
       }

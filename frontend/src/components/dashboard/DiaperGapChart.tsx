@@ -65,7 +65,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
     labels,
     datasets: [
       {
-        label: 'ч',
+        label: 'h',
         data: points.map((p) => p.gap),
         showLine: false,
         pointRadius: 3.5,
@@ -99,7 +99,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => {
             const v = (ctx.parsed.y ?? 0).toFixed(1)
-            return ctx.datasetIndex === 0 ? `${v} ч` : `MA: ${v} ч`
+            return ctx.datasetIndex === 0 ? `${v}h` : `MA: ${v}h`
           },
         },
       },
@@ -110,7 +110,7 @@ export function DiaperGapChart({ entries }: DiaperGapChartProps) {
     <ChartCard
       kicker="SCATTER · DIAPER GAPS"
       title="Diaper gaps"
-      subtitle="интервал пописов / покаков"
+      subtitle="interval between diaper events"
       accent={BR_CHART.cyan}
       footer={
         <LegendRow

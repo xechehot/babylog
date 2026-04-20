@@ -1,18 +1,18 @@
 import type { EntryType } from '../../types'
 
-export const TYPE_LABELS_RU: Record<EntryType, string> = {
-  feeding: 'Кормление',
-  diaper: 'Подгузник',
-  weight: 'Вес',
+export const TYPE_LABELS: Record<EntryType, string> = {
+  feeding: 'Feeding',
+  diaper: 'Diaper',
+  weight: 'Weight',
 }
 
-export const SUBTYPE_LABELS_RU: Record<string, string> = {
-  breast: 'Грудь',
-  formula: 'Смесь',
-  pee: 'Пис',
-  poo: 'Как',
-  dry: 'Сухой',
-  'pee+poo': 'Пис+Как',
+export const SUBTYPE_LABELS: Record<string, string> = {
+  breast: 'Breast',
+  formula: 'Formula',
+  pee: 'Pee',
+  poo: 'Poo',
+  dry: 'Dry',
+  'pee+poo': 'Pee+Poo',
 }
 
 export const SUBTYPE_ICONS: Record<string, string> = {

@@ -72,9 +72,9 @@ describe('mergeCloseFeedings', () => {
 
 describe('formatDateRu', () => {
   it('formats date as "day month_short"', () => {
-    expect(formatDateRu('2026-03-01')).toBe('1 мар')
-    expect(formatDateRu('2026-01-15')).toBe('15 янв')
-    expect(formatDateRu('2026-12-25')).toBe('25 дек')
+    expect(formatDateRu('2026-03-01')).toBe('1 Mar')
+    expect(formatDateRu('2026-01-15')).toBe('15 Jan')
+    expect(formatDateRu('2026-12-25')).toBe('25 Dec')
   })
 })
 
@@ -83,8 +83,8 @@ describe('formatDateRuFull', () => {
     // 2026-03-10 is a Tuesday
     const result = formatDateRuFull('2026-03-10')
     expect(result).toContain('10')
-    expect(result).toContain('мар')
-    expect(result).toContain('вторник')
+    expect(result).toContain('Mar')
+    expect(result).toContain('Tuesday')
   })
 })
 

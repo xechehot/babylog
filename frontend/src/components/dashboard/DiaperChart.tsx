@@ -23,7 +23,7 @@ export function DiaperChart({ days }: DiaperChartProps) {
       labels: days.map((d) => formatDateTickRu(d.date)),
       datasets: [
         {
-          label: 'моча',
+          label: 'wet',
           data: days.map(wetCount),
           backgroundColor: BR_CHART.cyanFill,
           borderColor: BR_CHART.cyan,
@@ -39,7 +39,7 @@ export function DiaperChart({ days }: DiaperChartProps) {
           },
         },
         {
-          label: 'стул',
+          label: 'soiled',
           data: days.map(dirtyCount),
           backgroundColor: BR_CHART.stoolFill,
           borderColor: BR_CHART.stool,
@@ -68,12 +68,12 @@ export function DiaperChart({ days }: DiaperChartProps) {
     <ChartCard
       kicker="BAR · GROUPED"
       title="Diapers / day"
-      subtitle="моча и стул"
+      subtitle="wet and soiled, counts"
       footer={
         <LegendRow
           items={[
-            { color: BR_CHART.cyan, label: 'моча · pee' },
-            { color: BR_CHART.stool, label: 'стул · stool' },
+            { color: BR_CHART.cyan, label: 'wet' },
+            { color: BR_CHART.stool, label: 'soiled' },
           ]}
         />
       }

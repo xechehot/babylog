@@ -46,7 +46,7 @@ function ProfilePage() {
         className="text-center py-12 uppercase"
         style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
       >
-        Загрузка…
+        Loading…
       </p>
     )
   }
@@ -108,7 +108,7 @@ function ProfilePage() {
 
       <PageHead
         kicker="SUBJECT · CONFIG"
-        title={<>Профиль</>}
+        title={<>Profile</>}
         meta={[
           profile.baby_name ? `UNIT ${profile.baby_name.toUpperCase()}` : 'UNIT UNREGISTERED',
           age ? `AGE ${age}` : null,
@@ -120,21 +120,21 @@ function ProfilePage() {
       <div className="px-5 space-y-5 max-w-md mx-auto">
         <div>
           <label htmlFor="name" style={labelStyle}>
-            [ Имя · NAME ]
+            [ NAME ]
           </label>
           <input
             type="text"
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="введите имя"
+            placeholder="enter name"
             style={inputStyle}
           />
         </div>
 
         <div>
           <label htmlFor="birthDate" style={labelStyle}>
-            [ Дата рождения · DOB ]
+            [ DATE OF BIRTH · DOB ]
           </label>
           <input
             type="date"
@@ -161,7 +161,7 @@ function ProfilePage() {
 
         <div>
           <label htmlFor="birthWeight" style={labelStyle}>
-            [ Вес при рождении · BIRTH MASS ]
+            [ BIRTH MASS · GRAMS ]
           </label>
           <div className="relative">
             <input
@@ -203,12 +203,12 @@ function ProfilePage() {
         </div>
 
         <div>
-          <label style={labelStyle}>[ Пол · SEX ]</label>
+          <label style={labelStyle}>[ SEX ]</label>
           <div className="flex gap-2">
             {(
               [
-                ['boy', 'Мальчик · BOY', BR.cyan],
-                ['girl', 'Девочка · GIRL', BR.rose],
+                ['boy', 'BOY', BR.cyan],
+                ['girl', 'GIRL', BR.rose],
               ] as const
             ).map(([value, label, accent]) => {
               const on = sex === value
@@ -254,7 +254,7 @@ function ProfilePage() {
             opacity: isSaving ? 0.5 : 1,
           }}
         >
-          {isSaving ? 'SAVING…' : '[ СОХРАНИТЬ · COMMIT ]'}
+          {isSaving ? 'SAVING…' : '[ SAVE · COMMIT ]'}
         </button>
       </div>
     </>

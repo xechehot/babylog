@@ -143,7 +143,7 @@ function ReviewPage() {
           kicker="AUDIT · PARSE vs SOURCE"
           title={
             <>
-              Сверка<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
+              Audit<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
             </>
           }
           meta={[

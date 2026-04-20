@@ -67,7 +67,7 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
     labels,
     datasets: [
       {
-        label: 'ч',
+        label: 'h',
         data: points.map((p) => p.gap),
         showLine: false,
         pointRadius: 4,
@@ -102,7 +102,7 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => {
             const v = (ctx.parsed.y ?? 0).toFixed(1)
-            return ctx.datasetIndex === 0 ? `${v} ч` : `MA: ${v} ч`
+            return ctx.datasetIndex === 0 ? `${v}h` : `MA: ${v}h`
           },
         },
       },
@@ -113,11 +113,11 @@ export function FeedingGapChart({ entries }: FeedingGapChartProps) {
     <ChartCard
       kicker="SCATTER · INTERVAL"
       title="Feeding gaps"
-      subtitle="интервал между кормлениями"
+      subtitle="interval between feedings"
       footer={
         <LegendRow
           items={[
-            { color: BR_CHART.cyan, label: `normal (<${LONG_GAP_THRESHOLD}ч)` },
+            { color: BR_CHART.cyan, label: `normal (<${LONG_GAP_THRESHOLD}h)` },
             { color: BR_CHART.blood, label: 'long gap' },
             { color: BR_CHART.amber, line: true, label: 'moving avg' },
           ]}

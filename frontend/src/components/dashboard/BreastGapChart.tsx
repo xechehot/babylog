@@ -61,7 +61,7 @@ export function BreastGapChart({ entries }: BreastGapChartProps) {
     labels,
     datasets: [
       {
-        label: 'ч',
+        label: 'h',
         data: points.map((p) => p.gap),
         showLine: false,
         pointRadius: 3.5,
@@ -95,7 +95,7 @@ export function BreastGapChart({ entries }: BreastGapChartProps) {
         callbacks: {
           label: (ctx: TooltipItem<'line'>) => {
             const v = (ctx.parsed.y ?? 0).toFixed(1)
-            return ctx.datasetIndex === 0 ? `${v} ч` : `MA: ${v} ч`
+            return ctx.datasetIndex === 0 ? `${v}h` : `MA: ${v}h`
           },
         },
       },
@@ -106,7 +106,7 @@ export function BreastGapChart({ entries }: BreastGapChartProps) {
     <ChartCard
       kicker="SCATTER · BREAST GAPS"
       title="Breast-feed gaps"
-      subtitle="интервал грудного"
+      subtitle="interval between breast feeds"
       accent={BR_CHART.rose}
       footer={
         <LegendRow

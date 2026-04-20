@@ -52,7 +52,7 @@ export function TopBar() {
         <Link
           to="/profile"
           className="p-2 -m-2 transition-colors"
-          aria-label="Профиль"
+          aria-label="Profile"
           style={{ color: BR.amber }}
         >
           <svg

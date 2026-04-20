@@ -50,31 +50,31 @@ function interpolateWHO(data: number[], ageMonths: number): number | null {
 }
 
 const MONTH_NAMES = [
-  'Рожд.',
-  '1 мес',
-  '2 мес',
-  '3 мес',
-  '4 мес',
-  '5 мес',
-  '6 мес',
-  '7 мес',
-  '8 мес',
-  '9 мес',
-  '10 мес',
-  '11 мес',
-  '12 мес',
-  '13 мес',
-  '14 мес',
-  '15 мес',
-  '16 мес',
-  '17 мес',
-  '18 мес',
-  '19 мес',
-  '20 мес',
-  '21 мес',
-  '22 мес',
-  '23 мес',
-  '24 мес',
+  'Birth',
+  '1 mo',
+  '2 mo',
+  '3 mo',
+  '4 mo',
+  '5 mo',
+  '6 mo',
+  '7 mo',
+  '8 mo',
+  '9 mo',
+  '10 mo',
+  '11 mo',
+  '12 mo',
+  '13 mo',
+  '14 mo',
+  '15 mo',
+  '16 mo',
+  '17 mo',
+  '18 mo',
+  '19 mo',
+  '20 mo',
+  '21 mo',
+  '22 mo',
+  '23 mo',
+  '24 mo',
 ]
 
 // Blade Runner WHO palette — outer band amber tint, inner band cyan tint.
@@ -151,7 +151,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
             marginBottom: 14,
           }}
         >
-          Для отображения кривых роста ВОЗ укажите пол ребёнка
+          Set the baby's sex to display WHO growth curves
         </p>
         <Link
           to="/profile"
@@ -167,7 +167,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
             textShadow: `0 0 10px ${BR.amberGlow}`,
           }}
         >
-          Перейти в профиль
+          Go to profile
         </Link>
       </div>
     )
@@ -231,7 +231,7 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
     labels,
     datasets: [
       {
-        label: 'Вес (г)',
+        label: 'Weight (g)',
         data: babyData,
         borderColor: BR_CHART.amber,
         backgroundColor: BR_CHART.amber,
@@ -274,10 +274,10 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
           label: (ctx: TooltipItem<'line'>) => {
             const val = ctx.parsed.y
             if (val == null) return ''
-            if (ctx.dataset.label === 'Вес (г)') {
-              return `${Math.round(val)} г (${(val / 1000).toFixed(2)} кг)`
+            if (ctx.dataset.label === 'Weight (g)') {
+              return `${Math.round(val)} g (${(val / 1000).toFixed(2)} kg)`
             }
-            return `${ctx.dataset.label}: ${(val / 1000).toFixed(1)} кг`
+            return `${ctx.dataset.label}: ${(val / 1000).toFixed(1)} kg`
           },
         },
       },
@@ -342,13 +342,13 @@ export function WeightChart({ entries, birthDate, birthWeight, sex }: WeightChar
       <ChartCard
         kicker="LINE · WHO BANDS"
         title="Weight vs WHO"
-        subtitle="кг · against WHO percentile curves"
+        subtitle="kg · against WHO percentile curves"
         accent={BR_CHART.rose}
         footer={
           <LegendRow
             items={[
-              { color: BR_CHART.amber, label: 'вес · baby' },
-              { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50-й' },
+              { color: BR_CHART.amber, label: 'baby' },
+              { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50th' },
               { color: 'rgba(255,179,71,0.60)', line: true, label: '15 / 85' },
               { color: 'rgba(255,77,77,0.55)', line: true, label: '3 / 97' },
             ]}
@@ -401,7 +401,7 @@ function VelocityChart({
   const chartData = {
     datasets: [
       {
-        label: 'Набор (г/нед)',
+        label: 'Gain (g/wk)',
         data: babyData,
         borderColor: BR_CHART.amber,
         backgroundColor: BR_CHART.amber,
@@ -417,7 +417,7 @@ function VelocityChart({
         order: 0,
       },
       {
-        label: 'WHO 5-й',
+        label: 'WHO 5th',
         data: whoStepData('p5'),
         borderColor: 'rgba(255,77,77,0.55)',
         borderWidth: 1,
@@ -430,7 +430,7 @@ function VelocityChart({
         order: 2,
       },
       {
-        label: 'WHO 25-й',
+        label: 'WHO 25th',
         data: whoStepData('p25'),
         borderColor: 'rgba(255,179,71,0.60)',
         borderWidth: 1,
@@ -443,7 +443,7 @@ function VelocityChart({
         order: 2,
       },
       {
-        label: 'WHO медиана',
+        label: 'WHO median',
         data: whoStepData('p50'),
         borderColor: 'rgba(240,225,200,0.80)',
         borderWidth: 2,
@@ -481,13 +481,13 @@ function VelocityChart({
           maxRotation: 0,
           callback: function (value: string | number) {
             const d = Number(value)
-            if (d === 0) return 'Рожд.'
+            if (d === 0) return 'Birth'
             if (d <= 60) {
-              if (d % 7 === 0) return `${d / 7} нед`
+              if (d % 7 === 0) return `${d / 7} wk`
               return null
             }
             const months = Math.round(d / 30.4375)
-            if (Math.abs(d - months * 30.4375) < 3) return `${months} мес`
+            if (Math.abs(d - months * 30.4375) < 3) return `${months} mo`
             return null
           },
           stepSize: maxDay <= 60 ? 7 : 30,
@@ -522,22 +522,22 @@ function VelocityChart({
           title: (items: TooltipItem<'line'>[]) => {
             if (!items.length) return ''
             const d = items[0].parsed.x ?? 0
-            if (d <= 60) return `День ${Math.round(d)} (${(d / 7).toFixed(1)} нед)`
-            return `${Math.round(d / 30.4375)} мес`
+            if (d <= 60) return `Day ${Math.round(d)} (${(d / 7).toFixed(1)} wk)`
+            return `${Math.round(d / 30.4375)} mo`
           },
           label: (ctx: TooltipItem<'line'>) => {
             const val = ctx.parsed.y
             if (val == null) return ''
-            if (ctx.dataset.label === 'Набор (г/нед)') {
+            if (ctx.dataset.label === 'Gain (g/wk)') {
               const px = ctx.parsed.x ?? 0
               const pt = points.find((p) => Math.abs(Math.round(p.ageDays) - px) < 2)
               if (pt) {
                 const sign = pt.gainGrams >= 0 ? '+' : ''
-                return `${Math.round(val)} г/нед (${sign}${pt.gainGrams} г за ${pt.days} дн.)`
+                return `${Math.round(val)} g/wk (${sign}${pt.gainGrams} g over ${pt.days} days)`
               }
-              return `${Math.round(val)} г/нед`
+              return `${Math.round(val)} g/wk`
             }
-            return `${ctx.dataset.label}: ${Math.round(val)} г/нед`
+            return `${ctx.dataset.label}: ${Math.round(val)} g/wk`
           },
         },
       },
@@ -548,13 +548,13 @@ function VelocityChart({
     <ChartCard
       kicker="LINE · VELOCITY"
       title="Weight gain"
-      subtitle="г в неделю"
+      subtitle="g per week"
       accent={BR_CHART.amber}
       footer={
         <LegendRow
           items={[
-            { color: BR_CHART.amber, label: 'набор · baby' },
-            { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50-й' },
+            { color: BR_CHART.amber, label: 'baby' },
+            { color: 'rgba(240,225,200,0.80)', line: true, label: 'WHO · 50th' },
             { color: 'rgba(255,179,71,0.60)', line: true, label: 'WHO · 25' },
             { color: 'rgba(255,77,77,0.55)', line: true, label: 'WHO · 5' },
           ]}
@@ -574,18 +574,18 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
       lastDate = p.date
       const d = new Date(p.date + 'T00:00:00')
       const months = [
-        'янв',
-        'фев',
-        'мар',
-        'апр',
-        'май',
-        'июн',
-        'июл',
-        'авг',
-        'сен',
-        'окт',
-        'ноя',
-        'дек',
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ]
       return `${d.getDate()} ${months[d.getMonth()]}`
     }
@@ -598,7 +598,7 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
     labels,
     datasets: [
       {
-        label: 'Вес (г)',
+        label: 'Weight (g)',
         data: weights,
         borderColor: BR_CHART.amber,
         backgroundColor: BR_CHART.amberFill,
@@ -625,14 +625,14 @@ function SimpleWeightChart({ points }: { points: WeightPoint[] }) {
       tooltip: {
         ...baseLineOptions().plugins!.tooltip,
         callbacks: {
-          label: (ctx: TooltipItem<'line'>) => `${Math.round(ctx.parsed.y ?? 0)} г`,
+          label: (ctx: TooltipItem<'line'>) => `${Math.round(ctx.parsed.y ?? 0)} g`,
         },
       },
     },
   }
 
   return (
-    <ChartCard kicker="LINE · MASS" title="Weight" subtitle="граммы" accent={BR_CHART.rose}>
+    <ChartCard kicker="LINE · MASS" title="Weight" subtitle="grams" accent={BR_CHART.rose}>
       <Line data={absData} options={absOptions} />
     </ChartCard>
   )
