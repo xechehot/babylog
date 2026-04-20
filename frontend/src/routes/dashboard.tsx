@@ -26,6 +26,13 @@ import {
   computeDailyAvgFeedingSpeed,
 } from '../components/dashboard/dailyAggregates'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
+import { PeriodAverages } from '../components/dashboard/PeriodAverages.tsx'
+import { MissingDaysBanner } from '../components/dashboard/MissingDaysBanner'
+import {
+  computePeriodAverages,
+  findMissingDays,
+  getLoggedDays,
+} from '../components/dashboard/periodAverages'
 import { BR } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { Rule } from '../components/br/Rule'
@@ -92,6 +99,18 @@ function DashboardPage() {
     (e) => e.date === yesterdayStr && e.subtype !== 'dry',
   )
 
+  const allFeedings = feedingData?.entries ?? []
+  const allDiapers = diaperData?.entries ?? []
+  const loggedDays = getLoggedDays(allFeedings, allDiapers, from_date, to_date)
+  const periodResult = computePeriodAverages({
+    days,
+    feedingEntries: allFeedings,
+    diaperEntries: allDiapers,
+    from: from_date,
+    to: to_date,
+  })
+  const missingDays = findMissingDays(from_date, to_date, loggedDays, getTodayStr())
+
   return (
     <>
       <PageHead
@@ -147,6 +166,10 @@ function DashboardPage() {
             feedingEntries={yesterdayFeedings}
             diaperEntries={yesterdayDiapers}
           />
+
+          <MissingDaysBanner missing={missingDays} />
+          <Rule label="AVERAGES · PER LOGGED DAY" />
+          <PeriodAverages result={periodResult} />
 
           <Rule label="TOTALS · ALL-TIME" accent={BR.cyan} />
           <AllTimeTotals totals={data.all_time_totals} />
