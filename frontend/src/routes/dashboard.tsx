@@ -99,6 +99,7 @@ function DashboardPage() {
     (e) => e.date === yesterdayStr && e.subtype !== 'dry',
   )
 
+  const entriesReady = feedingData !== undefined && diaperData !== undefined
   const allFeedings = feedingData?.entries ?? []
   const allDiapers = diaperData?.entries ?? []
   const loggedDays = getLoggedDays(allFeedings, allDiapers, from_date, to_date)
@@ -109,7 +110,9 @@ function DashboardPage() {
     from: from_date,
     to: to_date,
   })
-  const missingDays = findMissingDays(from_date, to_date, loggedDays, getTodayStr())
+  const missingDays = entriesReady
+    ? findMissingDays(from_date, to_date, loggedDays, getTodayStr())
+    : []
 
   return (
     <>

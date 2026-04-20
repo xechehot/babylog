@@ -4,7 +4,7 @@ import type { PeriodAveragesResult } from './periodAverages'
 
 function fmtCount(v: number | null): string {
   if (v == null) return '—'
-  return v.toFixed(1)
+  return Number.isInteger(v) ? v.toString() : v.toFixed(1)
 }
 
 function fmtHours(v: number | null): string {
