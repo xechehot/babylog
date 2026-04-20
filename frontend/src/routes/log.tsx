@@ -10,6 +10,7 @@ import {
   SUBTYPE_LABELS,
   FEEDING_SUBTYPES,
   DIAPER_SUBTYPES,
+  PILLS_SUBTYPES,
 } from '../components/entry/constants'
 import { BR, entryAccent } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
@@ -457,6 +458,10 @@ function formatLabelEn(entryType: string, subtype: string | null): string {
     return 'DIAPER'
   }
   if (entryType === 'weight') return 'WEIGHT · MASS'
+  if (entryType === 'pills') {
+    if (subtype === 'vigantol') return 'PILLS · VIGANTOL'
+    return 'PILLS'
+  }
   return entryType.toUpperCase()
 }
 
@@ -524,6 +529,7 @@ function InlineEditForm({
             setEditType(t)
             if (t === 'feeding') setEditSubtype('formula')
             else if (t === 'diaper') setEditSubtype('pee')
+            else if (t === 'pills') setEditSubtype('vigantol')
             else setEditSubtype('')
           }}
         >
@@ -553,6 +559,19 @@ function InlineEditForm({
             onChange={(e) => setEditSubtype(e.target.value)}
           >
             {DIAPER_SUBTYPES.map((s) => (
+              <option key={s} value={s}>
+                {SUBTYPE_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        )}
+        {editType === 'pills' && (
+          <select
+            style={inputStyle}
+            value={editSubtype}
+            onChange={(e) => setEditSubtype(e.target.value)}
+          >
+            {PILLS_SUBTYPES.map((s) => (
               <option key={s} value={s}>
                 {SUBTYPE_LABELS[s]}
               </option>
@@ -697,6 +716,7 @@ function EntryForm({
             setType(t)
             if (t === 'feeding') setSubtype('formula')
             else if (t === 'diaper') setSubtype('pee')
+            else if (t === 'pills') setSubtype('vigantol')
             else setSubtype('')
           }}
         >
@@ -718,6 +738,15 @@ function EntryForm({
         {type === 'diaper' && (
           <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
             {DIAPER_SUBTYPES.map((s) => (
+              <option key={s} value={s}>
+                {SUBTYPE_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        )}
+        {type === 'pills' && (
+          <select style={inputStyle} value={subtype} onChange={(e) => setSubtype(e.target.value)}>
+            {PILLS_SUBTYPES.map((s) => (
               <option key={s} value={s}>
                 {SUBTYPE_LABELS[s]}
               </option>
