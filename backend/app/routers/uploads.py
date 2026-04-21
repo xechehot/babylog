@@ -2,7 +2,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from app.config import settings
@@ -170,6 +170,30 @@ async def get_upload_image(upload_id: int) -> FileResponse:
         raise HTTPException(status_code=404, detail="Image file not found")
 
     return FileResponse(filepath, filename=row["filename"])
+
+
+@router.delete("/{upload_id}", status_code=204)
+async def delete_upload(upload_id: int) -> Response:
+    async with get_db() as db:
+        cursor = await db.execute("SELECT filepath FROM uploads WHERE id=?", (upload_id,))
+        upload = await cursor.fetchone()
+        if not upload:
+            raise HTTPException(status_code=404, detail="Upload not found")
+
+        await db.execute("DELETE FROM entries WHERE upload_id=?", (upload_id,))
+        await db.execute("DELETE FROM uploads WHERE id=?", (upload_id,))
+        await db.commit()
+
+    stored = Path(upload["filepath"])
+    for candidate in (stored, Path(settings.upload_dir) / stored.name):
+        if candidate.exists():
+            try:
+                candidate.unlink()
+            except OSError as exc:
+                logger.warning("Failed to remove upload file %s: %s", candidate, exc)
+            break
+
+    return Response(status_code=204)
 
 
 @router.post("/{upload_id}/reprocess")

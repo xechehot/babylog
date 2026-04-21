@@ -106,6 +106,23 @@ function ReviewPage() {
     },
   })
 
+  const wipeMutation = useMutation({
+    mutationFn: (id: number) => api.del(`/api/uploads/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['uploads'] })
+      queryClient.removeQueries({ queryKey: ['upload', uploadId] })
+      navigate({ to: '/review', search: {} })
+    },
+  })
+
+  const rescanMutation = useMutation({
+    mutationFn: (id: number) => api.post(`/api/uploads/${id}/reprocess`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['uploads'] })
+      queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
+    },
+  })
+
   const doneUploads = (uploadsQuery.data?.uploads ?? []).filter((u) => u.status === 'done')
   const detail = detailQuery.data
   const entries = detail?.entries ?? []
@@ -202,6 +219,58 @@ function ReviewPage() {
               ))}
             </select>
           </div>
+          {uploadId && detail && (detail.status === 'done' || detail.status === 'failed') && (
+            <div className="flex gap-2 mt-2">
+              <button
+                disabled={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => {
+                  if (confirm('Re-scan this image? Existing entries will be deleted and regenerated.')) {
+                    rescanMutation.mutate(uploadId)
+                  }
+                }}
+                className="flex-1 uppercase"
+                style={{
+                  fontFamily: BR.mono,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  padding: '8px 10px',
+                  minHeight: 36,
+                  color: BR.amber,
+                  border: `1px solid ${BR.amber}`,
+                  background: 'rgba(255,179,71,0.08)',
+                  opacity: rescanMutation.isPending || wipeMutation.isPending ? 0.5 : 1,
+                }}
+              >
+                ↻ RESCAN
+              </button>
+              <button
+                disabled={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Wipe this upload? The image and all its entries will be permanently deleted.',
+                    )
+                  ) {
+                    wipeMutation.mutate(uploadId)
+                  }
+                }}
+                className="flex-1 uppercase"
+                style={{
+                  fontFamily: BR.mono,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                  padding: '8px 10px',
+                  minHeight: 36,
+                  color: BR.blood,
+                  border: `1px solid ${BR.blood}`,
+                  background: 'rgba(255,77,77,0.08)',
+                  opacity: rescanMutation.isPending || wipeMutation.isPending ? 0.5 : 1,
+                }}
+              >
+                ✕ WIPE
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
