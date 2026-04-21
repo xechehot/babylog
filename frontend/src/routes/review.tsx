@@ -224,7 +224,9 @@ function ReviewPage() {
               <button
                 disabled={rescanMutation.isPending || wipeMutation.isPending}
                 onClick={() => {
-                  if (confirm('Re-scan this image? Existing entries will be deleted and regenerated.')) {
+                  if (
+                    confirm('Re-scan this image? Existing entries will be deleted and regenerated.')
+                  ) {
                     rescanMutation.mutate(uploadId)
                   }
                 }}

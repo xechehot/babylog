@@ -34,12 +34,7 @@ export function PeriodAverages({ result }: { result: PeriodAveragesResult }) {
         accent={BR.rose}
       />
       <ReadoutTile label="FORMULA / DAY" value={fmtCount(result.formulaPerDay)} unit="×" />
-      <ReadoutTile
-        label="WET / DAY"
-        value={fmtCount(result.wetPerDay)}
-        unit="×"
-        accent={BR.cyan}
-      />
+      <ReadoutTile label="WET / DAY" value={fmtCount(result.wetPerDay)} unit="×" accent={BR.cyan} />
       <ReadoutTile
         label="SOIL / DAY"
         value={fmtCount(result.soilPerDay)}

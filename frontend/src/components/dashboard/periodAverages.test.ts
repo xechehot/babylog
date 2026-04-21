@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { getLoggedDays, pooledAvgGapHours, computePeriodAverages, findMissingDays } from './periodAverages'
+import {
+  getLoggedDays,
+  pooledAvgGapHours,
+  computePeriodAverages,
+  findMissingDays,
+} from './periodAverages'
 import type { Entry, DashboardDay } from '../../types'
 
-function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type: Entry['entry_type'] }): Entry {
+function makeEntry(
+  overrides: Partial<Entry> & { occurred_at: string; entry_type: Entry['entry_type'] },
+): Entry {
   return {
     id: 0,
     upload_id: null,
@@ -154,9 +161,24 @@ describe('computePeriodAverages', () => {
 
   it('computes per-day averages divided by logged-day count', () => {
     const feedings = [
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T12:00:00', value: 50 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-02T08:00:00', value: 120 }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T08:00:00',
+        value: 100,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'formula',
+        occurred_at: '2026-03-01T12:00:00',
+        value: 50,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-02T08:00:00',
+        value: 120,
+      }),
     ]
     const diapers = [
       makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-01T10:00:00' }),
@@ -185,8 +207,18 @@ describe('computePeriodAverages', () => {
 
   it('restricts sums to entries in [from,to] range', () => {
     const feedings = [
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-02-28T08:00:00', value: 9999 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-02-28T08:00:00',
+        value: 9999,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T08:00:00',
+        value: 100,
+      }),
     ]
     const days = [makeDay({ date: '2026-03-01', feeding_total_ml: 100 })]
     const result = computePeriodAverages({
@@ -203,9 +235,24 @@ describe('computePeriodAverages', () => {
 
   it('computes pooled intervals for each subset', () => {
     const feedings = [
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T10:00:00', value: 50 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T14:00:00', value: 120 }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T08:00:00',
+        value: 100,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'formula',
+        occurred_at: '2026-03-01T10:00:00',
+        value: 50,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T14:00:00',
+        value: 120,
+      }),
     ]
     const diapers = [
       makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-01T08:00:00' }),
@@ -233,9 +280,24 @@ describe('computePeriodAverages', () => {
     // A breast+formula pair 10 min apart should count as one session,
     // so the FEED INT tile is not pulled down by the tiny within-session gap.
     const feedings = [
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 80 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T08:10:00', value: 40 }),
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T11:00:00', value: 100 }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T08:00:00',
+        value: 80,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'formula',
+        occurred_at: '2026-03-01T08:10:00',
+        value: 40,
+      }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'breast',
+        occurred_at: '2026-03-01T11:00:00',
+        value: 100,
+      }),
     ]
     const result = computePeriodAverages({
       days: [makeDay({ date: '2026-03-01' })],
