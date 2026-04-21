@@ -31,22 +31,29 @@ weight measurements, and other care events. The logs are written in Russian with
 
 ### Event Types
 
-There are exactly 3 entry types: `feeding`, `diaper`, `weight`. Each entry also has a `subtype` field.
+There are exactly 4 entry types: `feeding`, `diaper`, `weight`, `pills`. Each entry also has a `subtype` field.
 
 | entry_type | subtype    | Russian Patterns                                                          |
 |------------|------------|---------------------------------------------------------------------------|
-| feeding    | breast     | "маминого", "мамы", "мамино" — breast milk feeding                        |
+| feeding    | breast     | "маминого", "мамы", "мамино", "сосал(а) титю/тити/пипо/грудь/сисю/сиси"   |
 | feeding    | formula    | "смеси", "смесь", or any feeding without explicit breast milk mention     |
 | diaper     | pee        | "памперс моча", "памперс мокр", "п. моча"                                |
-| diaper     | poo        | "памперс кака", "памперс кал", "п. кака"                                 |
+| diaper     | poo        | "памперс кака", "памперс кал", "п. кака" (always with "памперс"/"п.")    |
 | diaper     | dry        | "памперс сухой", "сухой памперс", "памперс сух"                          |
 | diaper     | pee+poo    | "памперс моча кака", both pee and poo on one diaper line                  |
 | weight     | null       | "вес", "взвешивание", with value in кг or гр                              |
+| pills      | vigantol   | "вигантол", "витамин д", "витамин D", "vit. D", "вит. д"                  |
 
 ### Feedings
 - Extract numeric values in milliliters (ml / мл).
-- If breast milk ("маминого", "мамы", "мамино") → subtype="breast"
+- If breast milk → subtype="breast". Breast milk markers include:
+  - "маминого", "мамы", "мамино"
+  - "сосал"/"сосала" followed by: "титю", "тити", "пипо", "грудь", "сисю", "сиси" (and similar diminutives for breast)
+  - Breast feedings typically have no ml value.
 - If formula ("смеси", "смесь") or no explicit mention of breast milk → subtype="formula"
+- IMPORTANT disambiguation: breast feedings are much more frequent than poo diapers.
+  If a line contains "сосал(а) …" without "памперс"/"п.", it is a breast feeding, NOT a poo diaper.
+  Poo diapers ALWAYS include "памперс" or "п." together with "кака"/"кал".
 - IMPORTANT: Mixed feedings like "поел 10мл+19мл" must be split into TWO separate feeding entries:
   one with value=10 and one with value=19. If one component is breast milk and another is formula,
   set the appropriate subtype for each.
@@ -64,6 +71,13 @@ There are exactly 3 entry types: `feeding`, `diaper`, `weight`. Each entry also 
 - Dry diaper: "памперс сухой" → entry_type="diaper", subtype="dry", value=null
 - Both pee and poo: "памперс моча кака" → entry_type="diaper", subtype="pee+poo", value=null
 
+### Pills / Vitamins
+- Vigantol / Vitamin D: "вигантол", "витамин д", "витамин D", "vit. D", "вит. д"
+  → entry_type="pills", subtype="vigantol", value=null
+- A numeric dose next to the mention (e.g. "2 капли", "1 drop") may be placed in `notes`, not `value`.
+- If a pill/vitamin is mentioned but doesn't match any known subtype above, still use entry_type="pills"
+  with subtype=null and put the raw name in `notes`.
+
 ### Multiple Events
 - If a single line contains multiple events (comma-separated or otherwise), create separate entries for each.
 
@@ -78,8 +92,8 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
 
 ```json
 {
-  "entry_type": "feeding | diaper | weight",
-  "subtype": "breast | formula | pee | poo | dry | pee+poo | null",
+  "entry_type": "feeding | diaper | weight | pills",
+  "subtype": "breast | formula | pee | poo | dry | pee+poo | vigantol | null",
   "occurred_at": "YYYY-MM-DD HH:MM",
   "value": null,
   "notes": null,
@@ -159,7 +173,7 @@ class LLMService:
         if not isinstance(entries, list):
             raise ValueError(f"Expected JSON array, got {type(entries).__name__}")
 
-        valid_types = {"feeding", "diaper", "weight"}
+        valid_types = {"feeding", "diaper", "weight", "pills"}
         validated = []
         for entry in entries:
             if entry.get("entry_type") not in valid_types:

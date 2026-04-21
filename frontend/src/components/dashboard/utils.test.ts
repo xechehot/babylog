@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mergeCloseFeedings, formatDateRu, getDateRange, formatDateRuFull } from './utils'
 import type { Entry } from '../../types'
 
@@ -89,14 +89,36 @@ describe('formatDateRuFull', () => {
 })
 
 describe('getDateRange', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-21T10:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('returns from_date and to_date strings', () => {
     const range = getDateRange(7)
     expect(range.from_date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(range.to_date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('range of 1 day means from == to', () => {
+  it('7d ends yesterday and spans the last 7 full days', () => {
+    expect(getDateRange(7)).toEqual({ from_date: '2026-04-14', to_date: '2026-04-20' })
+  })
+
+  it('14d ends yesterday and spans the last 14 full days', () => {
+    expect(getDateRange(14)).toEqual({ from_date: '2026-04-07', to_date: '2026-04-20' })
+  })
+
+  it('30d ends yesterday and spans the last 30 full days', () => {
+    expect(getDateRange(30)).toEqual({ from_date: '2026-03-22', to_date: '2026-04-20' })
+  })
+
+  it('range of 1 day means from == to (yesterday)', () => {
     const range = getDateRange(1)
     expect(range.from_date).toBe(range.to_date)
+    expect(range.to_date).toBe('2026-04-20')
   })
 })

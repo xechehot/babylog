@@ -82,12 +82,16 @@ export function formatDateRu(dateStr: string): string {
   return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`
 }
 
-/** Returns inclusive date range for the given period in days. */
+/**
+ * Returns an inclusive date range of the last `days` full days, ending yesterday.
+ * E.g. on 2026-04-21 with days=7, returns 2026-04-14 → 2026-04-20.
+ */
 export function getDateRange(days: number): { from_date: string; to_date: string } {
-  const now = new Date()
-  const from = new Date(now)
+  const to = new Date()
+  to.setDate(to.getDate() - 1)
+  const from = new Date(to)
   from.setDate(from.getDate() - (days - 1))
-  return { from_date: formatISO(from), to_date: formatISO(now) }
+  return { from_date: formatISO(from), to_date: formatISO(to) }
 }
 
 /** Returns today's date as YYYY-MM-DD in local timezone. */
