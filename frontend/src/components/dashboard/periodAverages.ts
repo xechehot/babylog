@@ -1,4 +1,5 @@
 import type { Entry, DashboardDay } from '../../types'
+import { mergeCloseFeedings } from './utils'
 
 export interface PeriodAveragesInput {
   days: DashboardDay[]
@@ -99,7 +100,7 @@ export function computePeriodAverages(input: PeriodAveragesInput): PeriodAverage
     formulaPerDay: formulaCount / n,
     wetPerDay: wetCount / n,
     soilPerDay: soilCount / n,
-    feedingInterval: pooledAvgGapHours(feedingsInRange),
+    feedingInterval: pooledAvgGapHours(mergeCloseFeedings(feedingsInRange)),
     breastInterval: pooledAvgGapHours(breastEntries),
     formulaInterval: pooledAvgGapHours(formulaEntries),
     diaperInterval: pooledAvgGapHours(nonDryDiapers),

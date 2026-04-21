@@ -203,9 +203,9 @@ describe('computePeriodAverages', () => {
 
   it('computes pooled intervals for each subset', () => {
     const feedings = [
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00' }),
-      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T10:00:00' }),
-      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T14:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 100 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T10:00:00', value: 50 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T14:00:00', value: 120 }),
     ]
     const diapers = [
       makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-01T08:00:00' }),
@@ -219,7 +219,7 @@ describe('computePeriodAverages', () => {
       from: '2026-03-01',
       to: '2026-03-07',
     })
-    // All feedings: gaps [2, 4] => avg 3
+    // All feedings (sessions merged): gaps [2, 4] => avg 3
     expect(result.feedingInterval).toBeCloseTo(3, 5)
     // Breast only: 08 -> 14 => single 6h gap
     expect(result.breastInterval).toBeCloseTo(6, 5)
@@ -227,6 +227,25 @@ describe('computePeriodAverages', () => {
     expect(result.formulaInterval).toBeNull()
     // Diapers, excluding dry: 08 -> 11 => single 3h gap
     expect(result.diaperInterval).toBeCloseTo(3, 5)
+  })
+
+  it('merges close feedings (20-min window) for FEED INT', () => {
+    // A breast+formula pair 10 min apart should count as one session,
+    // so the FEED INT tile is not pulled down by the tiny within-session gap.
+    const feedings = [
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T08:00:00', value: 80 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-01T08:10:00', value: 40 }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-01T11:00:00', value: 100 }),
+    ]
+    const result = computePeriodAverages({
+      days: [makeDay({ date: '2026-03-01' })],
+      feedingEntries: feedings,
+      diaperEntries: [],
+      from: '2026-03-01',
+      to: '2026-03-07',
+    })
+    // Merged: [08:10 session, 11:00 session] => single 2h50m gap ≈ 2.833h
+    expect(result.feedingInterval).toBeCloseTo(50 / 60 + 2, 2)
   })
 })
 
