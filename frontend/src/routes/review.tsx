@@ -302,20 +302,14 @@ function ReviewMobileLayout(props: ReviewLayoutProps) {
         />
 
         <div className="px-5">
-          <UploadSelect
-            uploadId={uploadId}
-            doneUploads={doneUploads}
-            onChange={onSelectUpload}
-          />
+          <UploadSelect uploadId={uploadId} doneUploads={doneUploads} onChange={onSelectUpload} />
           {uploadId && detail && (detail.status === 'done' || detail.status === 'failed') && (
             <div className="flex gap-2 mt-2">
               {detail.status === 'done' && (
                 <ReviewButton
                   isReviewed={isReviewed}
                   pending={
-                    reviewMutation.isPending ||
-                    rescanMutation.isPending ||
-                    wipeMutation.isPending
+                    reviewMutation.isPending || rescanMutation.isPending || wipeMutation.isPending
                   }
                   onClick={() => reviewMutation.mutate({ id: uploadId, reviewed: !isReviewed })}
                   className="flex-1"
@@ -515,7 +509,9 @@ function ReviewLandscapeLayout(props: ReviewLayoutProps) {
             color: BR.dim,
           }}
         >
-          <span>{currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD')}</span>
+          <span>
+            {currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD')}
+          </span>
           <span style={{ color: BR.lineStrong }}>/</span>
           <span>{entries.length} RECORDS</span>
           <span style={{ color: BR.lineStrong }}>/</span>
@@ -542,9 +538,7 @@ function ReviewLandscapeLayout(props: ReviewLayoutProps) {
               <ReviewButton
                 isReviewed={isReviewed}
                 pending={
-                  reviewMutation.isPending ||
-                  rescanMutation.isPending ||
-                  wipeMutation.isPending
+                  reviewMutation.isPending || rescanMutation.isPending || wipeMutation.isPending
                 }
                 onClick={() => reviewMutation.mutate({ id: uploadId!, reviewed: !isReviewed })}
               />
@@ -555,20 +549,13 @@ function ReviewLandscapeLayout(props: ReviewLayoutProps) {
 
       {/* Upload selector row */}
       <div className="shrink-0" style={{ padding: '10px 32px 0' }}>
-        <UploadSelect
-          uploadId={uploadId}
-          doneUploads={doneUploads}
-          onChange={onSelectUpload}
-        />
+        <UploadSelect uploadId={uploadId} doneUploads={doneUploads} onChange={onSelectUpload} />
       </div>
 
       <StatusMessage uploadId={uploadId} detail={detail} />
 
       {showSplitView && (
-        <div
-          className="flex-1 grid min-h-0"
-          style={{ gridTemplateColumns: '1fr 1fr', gap: 0 }}
-        >
+        <div className="flex-1 grid min-h-0" style={{ gridTemplateColumns: '1fr 1fr', gap: 0 }}>
           {/* LEFT — source image */}
           <div
             className="flex flex-col min-h-0"
@@ -624,10 +611,7 @@ function ReviewLandscapeLayout(props: ReviewLayoutProps) {
           </div>
 
           {/* RIGHT — extracted entries */}
-          <div
-            className="flex flex-col min-h-0"
-            style={{ padding: '14px 32px 14px 16px' }}
-          >
+          <div className="flex flex-col min-h-0" style={{ padding: '14px 32px 14px 16px' }}>
             <div
               className="flex justify-between items-center uppercase"
               style={{
@@ -836,9 +820,7 @@ function RescanButton({
     <button
       disabled={pending}
       onClick={() => {
-        if (
-          confirm('Re-scan this image? Existing entries will be deleted and regenerated.')
-        ) {
+        if (confirm('Re-scan this image? Existing entries will be deleted and regenerated.')) {
           onClick()
         }
       }}
@@ -874,9 +856,7 @@ function WipeButton({
       disabled={pending}
       onClick={() => {
         if (
-          confirm(
-            'Wipe this upload? The image and all its entries will be permanently deleted.',
-          )
+          confirm('Wipe this upload? The image and all its entries will be permanently deleted.')
         ) {
           onClick()
         }

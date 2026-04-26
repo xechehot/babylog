@@ -262,7 +262,7 @@ function UploadPage() {
             const palette =
               upload.status === 'done' && upload.reviewed
                 ? REVIEWED_PALETTE
-                : STATUS_PALETTE[upload.status] ?? STATUS_PALETTE.pending
+                : (STATUS_PALETTE[upload.status] ?? STATUS_PALETTE.pending)
             const ts = upload.date_counts
               ? formatDateCounts(upload.date_counts)
               : `${upload.entry_count ?? 0} entries`
