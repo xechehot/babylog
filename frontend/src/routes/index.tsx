@@ -21,7 +21,7 @@ const STATUS_PALETTE: Record<string, { color: string; label: string }> = {
   failed: { color: BR.blood, label: 'REJECTED' },
 }
 
-const REVIEWED_PALETTE = { color: '#7fe0a4', label: 'PASSED' }
+const REVIEWED_PALETTE = { color: '#7fe0a4', label: 'REVIEWED' }
 
 function formatDateCounts(dateCounts: Record<string, number>): string {
   const entries = Object.entries(dateCounts)
