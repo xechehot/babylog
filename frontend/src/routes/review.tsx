@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
+import type { UseMutationResult } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Entry, EntryType, Upload, UploadDetail } from '../types'
 import { BR, entryAccent } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { Rule } from '../components/br/Rule'
 import { GlyphDot } from '../components/br/GlyphDot'
+import { useIsLandscape } from '../hooks/useIsLandscape'
 
 const BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, '')
 
@@ -42,12 +44,68 @@ const APPROVED_COLOR = '#7fe0a4'
 const APPROVED_BG = 'rgba(127,224,164,0.08)'
 const APPROVED_GLOW = 'rgba(127,224,164,0.55)'
 
+type UpdateMutation = UseMutationResult<
+  Entry,
+  Error,
+  {
+    id: number
+    entry_type?: string
+    subtype?: string | null
+    occurred_at?: string
+    value?: number | null
+    notes?: string | null
+    confirmed?: boolean
+  }
+>
+
+type CreateMutation = UseMutationResult<
+  Entry,
+  Error,
+  {
+    entry_type: string
+    subtype?: string | null
+    occurred_at: string
+    value?: number | null
+    notes?: string | null
+    upload_id?: number | null
+  }
+>
+
+type DeleteMutation = UseMutationResult<unknown, Error, number>
+type ReviewMutation = UseMutationResult<UploadDetail, Error, { id: number; reviewed: boolean }>
+type SimpleMutation = UseMutationResult<unknown, Error, number>
+
+interface ReviewLayoutProps {
+  uploadId: number | undefined
+  detail: UploadDetail | undefined
+  doneUploads: Upload[]
+  currentUpload: Upload | null | undefined
+  entries: Entry[]
+  grouped: Record<string, Entry[]>
+  showSplitView: boolean | undefined | 0
+  confCounts: Record<string, number>
+  flagStr: string
+  isReviewed: boolean
+  editingId: number | null
+  setEditingId: (id: number | null) => void
+  isAdding: boolean
+  setIsAdding: (v: boolean) => void
+  updateMutation: UpdateMutation
+  createMutation: CreateMutation
+  deleteMutation: DeleteMutation
+  wipeMutation: SimpleMutation
+  rescanMutation: SimpleMutation
+  reviewMutation: ReviewMutation
+  onSelectUpload: (id: number | undefined) => void
+}
+
 function ReviewPage() {
   const { uploadId } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const isLandscape = useIsLandscape()
 
   const uploadsQuery = useQuery({
     queryKey: ['uploads'],
@@ -159,6 +217,66 @@ function ReviewPage() {
   const currentUpload = detail ? doneUploads.find((u) => u.id === uploadId) : null
   const isReviewed = detail?.reviewed ?? false
 
+  const onSelectUpload = (id: number | undefined) => {
+    navigate({ to: '/review', search: id ? { uploadId: id } : {} })
+  }
+
+  const layoutProps: ReviewLayoutProps = {
+    uploadId,
+    detail,
+    doneUploads,
+    currentUpload,
+    entries,
+    grouped,
+    showSplitView,
+    confCounts,
+    flagStr,
+    isReviewed,
+    editingId,
+    setEditingId,
+    isAdding,
+    setIsAdding,
+    updateMutation,
+    createMutation,
+    deleteMutation,
+    wipeMutation,
+    rescanMutation,
+    reviewMutation,
+    onSelectUpload,
+  }
+
+  return isLandscape ? (
+    <ReviewLandscapeLayout {...layoutProps} />
+  ) : (
+    <ReviewMobileLayout {...layoutProps} />
+  )
+}
+
+function ReviewMobileLayout(props: ReviewLayoutProps) {
+  const {
+    uploadId,
+    detail,
+    doneUploads,
+    currentUpload,
+    entries,
+    grouped,
+    showSplitView,
+    confCounts,
+    flagStr,
+    isReviewed,
+    editingId,
+    setEditingId,
+    isAdding,
+    setIsAdding,
+    updateMutation,
+    createMutation,
+    deleteMutation,
+    wipeMutation,
+    rescanMutation,
+    reviewMutation,
+    onSelectUpload,
+  } = props
+
   return (
     <div
       className="flex flex-col"
@@ -184,195 +302,41 @@ function ReviewPage() {
         />
 
         <div className="px-5">
-          <div
-            className="flex items-center gap-2"
-            style={{
-              padding: '10px 12px',
-              border: `1px solid ${BR.line}`,
-              background: BR.char,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: BR.mono,
-                fontSize: 10,
-                letterSpacing: 2,
-                color: BR.amber,
-              }}
-            >
-              SRC
-            </span>
-            <select
-              value={uploadId ?? ''}
-              onChange={(e) => {
-                const val = e.target.value
-                navigate({
-                  to: '/review',
-                  search: val ? { uploadId: Number(val) } : {},
-                })
-              }}
-              className="flex-1"
-              style={{
-                fontFamily: BR.mono,
-                fontSize: 12,
-                color: BR.text,
-                background: 'transparent',
-                border: 'none',
-                padding: 0,
-                letterSpacing: 0.5,
-              }}
-            >
-              <option value="">— select an upload —</option>
-              {doneUploads.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.reviewed ? '✓ ' : ''}
-                  {u.filename} ({u.entry_count ?? 0})
-                </option>
-              ))}
-            </select>
-          </div>
+          <UploadSelect
+            uploadId={uploadId}
+            doneUploads={doneUploads}
+            onChange={onSelectUpload}
+          />
           {uploadId && detail && (detail.status === 'done' || detail.status === 'failed') && (
             <div className="flex gap-2 mt-2">
               {detail.status === 'done' && (
-                <button
-                  disabled={
+                <ReviewButton
+                  isReviewed={isReviewed}
+                  pending={
                     reviewMutation.isPending ||
                     rescanMutation.isPending ||
                     wipeMutation.isPending
                   }
                   onClick={() => reviewMutation.mutate({ id: uploadId, reviewed: !isReviewed })}
-                  className="flex-1 uppercase"
-                  title={isReviewed ? 'Mark this upload as not reviewed' : 'Mark this upload as fully reviewed'}
-                  style={{
-                    fontFamily: BR.mono,
-                    fontSize: 10,
-                    letterSpacing: 2,
-                    padding: '8px 10px',
-                    minHeight: 36,
-                    color: isReviewed ? APPROVED_COLOR : BR.dim,
-                    border: `1px solid ${isReviewed ? APPROVED_COLOR : BR.line}`,
-                    background: isReviewed ? APPROVED_BG : 'transparent',
-                    textShadow: isReviewed ? `0 0 8px ${APPROVED_GLOW}` : 'none',
-                    opacity:
-                      reviewMutation.isPending ||
-                      rescanMutation.isPending ||
-                      wipeMutation.isPending
-                        ? 0.5
-                        : 1,
-                  }}
-                >
-                  {isReviewed ? '✓ REVIEWED' : '✓ MARK REVIEWED'}
-                </button>
+                  className="flex-1"
+                />
               )}
-              <button
-                disabled={rescanMutation.isPending || wipeMutation.isPending}
-                onClick={() => {
-                  if (
-                    confirm('Re-scan this image? Existing entries will be deleted and regenerated.')
-                  ) {
-                    rescanMutation.mutate(uploadId)
-                  }
-                }}
-                className="flex-1 uppercase"
-                style={{
-                  fontFamily: BR.mono,
-                  fontSize: 10,
-                  letterSpacing: 2,
-                  padding: '8px 10px',
-                  minHeight: 36,
-                  color: BR.amber,
-                  border: `1px solid ${BR.amber}`,
-                  background: 'rgba(255,179,71,0.08)',
-                  opacity: rescanMutation.isPending || wipeMutation.isPending ? 0.5 : 1,
-                }}
-              >
-                ↻ RESCAN
-              </button>
-              <button
-                disabled={rescanMutation.isPending || wipeMutation.isPending}
-                onClick={() => {
-                  if (
-                    confirm(
-                      'Wipe this upload? The image and all its entries will be permanently deleted.',
-                    )
-                  ) {
-                    wipeMutation.mutate(uploadId)
-                  }
-                }}
-                className="flex-1 uppercase"
-                style={{
-                  fontFamily: BR.mono,
-                  fontSize: 10,
-                  letterSpacing: 2,
-                  padding: '8px 10px',
-                  minHeight: 36,
-                  color: BR.blood,
-                  border: `1px solid ${BR.blood}`,
-                  background: 'rgba(255,77,77,0.08)',
-                  opacity: rescanMutation.isPending || wipeMutation.isPending ? 0.5 : 1,
-                }}
-              >
-                ✕ WIPE
-              </button>
+              <RescanButton
+                pending={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => rescanMutation.mutate(uploadId)}
+                className="flex-1"
+              />
+              <WipeButton
+                pending={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => wipeMutation.mutate(uploadId)}
+                className="flex-1"
+              />
             </div>
           )}
         </div>
       </div>
 
-      {!uploadId && (
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p
-            className="uppercase"
-            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
-          >
-            Select an upload to review
-          </p>
-        </div>
-      )}
-
-      {uploadId && detail?.status === 'processing' && (
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p
-            className="uppercase"
-            style={{
-              fontFamily: BR.mono,
-              fontSize: 11,
-              letterSpacing: 2.5,
-              color: BR.cyan,
-              textShadow: `0 0 8px ${BR.cyanGlow}`,
-            }}
-          >
-            ▓▓▓▓░░░ SCANNING…
-          </p>
-        </div>
-      )}
-
-      {uploadId && detail?.status === 'pending' && (
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p
-            className="uppercase"
-            style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
-          >
-            ░░░ QUEUED
-          </p>
-        </div>
-      )}
-
-      {uploadId && detail?.status === 'failed' && (
-        <div className="flex-1 min-h-0 flex items-center justify-center px-5">
-          <p
-            className="text-center uppercase"
-            style={{
-              fontFamily: BR.mono,
-              fontSize: 11,
-              letterSpacing: 1.5,
-              color: BR.blood,
-            }}
-          >
-            [ERR] {detail.error_message}
-          </p>
-        </div>
-      )}
+      <StatusMessage uploadId={uploadId} detail={detail} />
 
       {showSplitView && (
         <>
@@ -431,59 +395,15 @@ function ReviewPage() {
             </div>
 
             <div className="px-5">
-              <div style={{ border: `1px solid ${BR.line}`, background: BR.char }}>
-                {Object.entries(grouped).map(([date, dayEntries]) => (
-                  <div key={date}>
-                    <div
-                      className="uppercase"
-                      style={{
-                        padding: '8px 14px',
-                        fontFamily: BR.mono,
-                        fontSize: 9,
-                        letterSpacing: 2.5,
-                        color: BR.dim,
-                        borderBottom: `1px dashed ${BR.line}`,
-                        background: 'rgba(255,179,71,0.04)',
-                      }}
-                    >
-                      ░ {date}
-                    </div>
-                    {dayEntries.map((entry) => (
-                      <EntryCard
-                        key={entry.id}
-                        entry={entry}
-                        isEditing={editingId === entry.id}
-                        onEdit={() => {
-                          setEditingId(entry.id)
-                          setIsAdding(false)
-                        }}
-                        onCancel={() => setEditingId(null)}
-                        onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
-                        onConfirm={() =>
-                          updateMutation.mutate({
-                            id: entry.id,
-                            confirmed: !entry.confirmed,
-                          })
-                        }
-                        onDelete={() => {
-                          if (confirm('Delete this entry?')) {
-                            deleteMutation.mutate(entry.id)
-                          }
-                        }}
-                        isSaving={updateMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                ))}
-                {entries.length === 0 && (
-                  <p
-                    className="text-center py-4 uppercase"
-                    style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
-                  >
-                    no entries
-                  </p>
-                )}
-              </div>
+              <EntriesList
+                grouped={grouped}
+                entries={entries}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                setIsAdding={setIsAdding}
+                updateMutation={updateMutation}
+                deleteMutation={deleteMutation}
+              />
             </div>
 
             {/* Add missing */}
@@ -497,29 +417,647 @@ function ReviewPage() {
                   onCancel={() => setIsAdding(false)}
                 />
               ) : (
-                <button
-                  className="w-full uppercase"
+                <AddMissingButton
                   onClick={() => {
                     setIsAdding(true)
                     setEditingId(null)
                   }}
-                  style={{
-                    padding: '12px',
-                    border: `1px dashed ${BR.amber}`,
-                    color: BR.amber,
-                    fontFamily: BR.mono,
-                    fontSize: 11,
-                    letterSpacing: 2,
-                    background: 'rgba(255,179,71,0.02)',
-                    minHeight: 44,
-                  }}
-                >
-                  ＋ ADD MISSING ENTRY
-                </button>
+                />
               )}
             </div>
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+function ReviewLandscapeLayout(props: ReviewLayoutProps) {
+  const {
+    uploadId,
+    detail,
+    doneUploads,
+    currentUpload,
+    entries,
+    grouped,
+    showSplitView,
+    confCounts,
+    flagStr,
+    isReviewed,
+    editingId,
+    setEditingId,
+    isAdding,
+    setIsAdding,
+    updateMutation,
+    createMutation,
+    deleteMutation,
+    wipeMutation,
+    rescanMutation,
+    reviewMutation,
+    onSelectUpload,
+  } = props
+
+  const lowCount = confCounts.low ?? 0
+  const approvedCount = entries.filter((e) => e.confirmed).length
+  const flagsActive = uploadId !== undefined && detail?.status === 'done'
+
+  return (
+    <div
+      className="flex flex-col"
+      style={{
+        // TopBar (~49px) + pb-20 outlet wrapper (80px) = ~129px; buffer to 140px
+        height: 'calc(100dvh - 140px)',
+      }}
+    >
+      {/* Wide header — kicker + title (left), meta + actions (right) */}
+      <div
+        className="shrink-0 flex items-end justify-between gap-6"
+        style={{
+          padding: '18px 32px 14px',
+          borderBottom: `1px solid ${BR.line}`,
+        }}
+      >
+        <div>
+          <div
+            className="flex items-center gap-2.5 uppercase"
+            style={{
+              fontFamily: BR.mono,
+              fontSize: 10,
+              letterSpacing: 3,
+              color: BR.amber,
+              textShadow: `0 0 10px ${BR.amber}55`,
+            }}
+          >
+            <span>◤</span>
+            <span>AUDIT · PARSE vs SOURCE</span>
+          </div>
+          <div
+            className="mt-1.5"
+            style={{
+              fontFamily: BR.display,
+              fontSize: 44,
+              fontWeight: 500,
+              lineHeight: 1.0,
+              letterSpacing: -1,
+              color: BR.text,
+            }}
+          >
+            Audit<span style={{ color: BR.amber, fontStyle: 'italic' }}>.</span>
+          </div>
+        </div>
+
+        <div
+          className="flex items-center gap-3 uppercase flex-wrap justify-end"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 10,
+            letterSpacing: 1.5,
+            color: BR.dim,
+          }}
+        >
+          <span>{currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD')}</span>
+          <span style={{ color: BR.lineStrong }}>/</span>
+          <span>{entries.length} RECORDS</span>
+          <span style={{ color: BR.lineStrong }}>/</span>
+          <span
+            style={{
+              color: lowCount > 0 ? BR.blood : BR.dim,
+              textShadow: lowCount > 0 ? `0 0 8px rgba(255,77,77,0.4)` : 'none',
+            }}
+          >
+            {flagStr}
+          </span>
+
+          {flagsActive && (
+            <>
+              <div style={{ width: 1, height: 24, background: BR.lineStrong, margin: '0 4px' }} />
+              <RescanButton
+                pending={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => rescanMutation.mutate(uploadId!)}
+              />
+              <WipeButton
+                pending={rescanMutation.isPending || wipeMutation.isPending}
+                onClick={() => wipeMutation.mutate(uploadId!)}
+              />
+              <ReviewButton
+                isReviewed={isReviewed}
+                pending={
+                  reviewMutation.isPending ||
+                  rescanMutation.isPending ||
+                  wipeMutation.isPending
+                }
+                onClick={() => reviewMutation.mutate({ id: uploadId!, reviewed: !isReviewed })}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Upload selector row */}
+      <div className="shrink-0" style={{ padding: '10px 32px 0' }}>
+        <UploadSelect
+          uploadId={uploadId}
+          doneUploads={doneUploads}
+          onChange={onSelectUpload}
+        />
+      </div>
+
+      <StatusMessage uploadId={uploadId} detail={detail} />
+
+      {showSplitView && (
+        <div
+          className="flex-1 grid min-h-0"
+          style={{ gridTemplateColumns: '1fr 1fr', gap: 0 }}
+        >
+          {/* LEFT — source image */}
+          <div
+            className="flex flex-col min-h-0"
+            style={{
+              padding: '14px 16px 14px 32px',
+              borderRight: `1px solid ${BR.line}`,
+            }}
+          >
+            <div
+              className="flex justify-between items-center mb-2 uppercase"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 9,
+                letterSpacing: 2.5,
+                color: BR.amber,
+                textShadow: `0 0 8px ${BR.amber}55`,
+              }}
+            >
+              <span>[ SOURCE · {currentUpload?.filename ?? `#${uploadId}`} ]</span>
+              <span style={{ color: BR.dim }}>[ pinch · zoom ]</span>
+            </div>
+            <PinchZoomImage
+              src={`${BASE_PATH}/api/uploads/${uploadId}/image`}
+              alt="Uploaded log"
+              className="flex-1 min-h-0"
+            />
+            <div
+              className="mt-2 flex justify-between uppercase"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 9,
+                letterSpacing: 1.8,
+                color: BR.dim,
+              }}
+            >
+              <span>
+                uploaded ·{' '}
+                {currentUpload?.created_at
+                  ? new Date(currentUpload.created_at).toLocaleString()
+                  : '—'}
+              </span>
+              {isReviewed && (
+                <span
+                  style={{
+                    color: APPROVED_COLOR,
+                    textShadow: `0 0 8px ${APPROVED_GLOW}`,
+                  }}
+                >
+                  ✓ REVIEWED
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT — extracted entries */}
+          <div
+            className="flex flex-col min-h-0"
+            style={{ padding: '14px 32px 14px 16px' }}
+          >
+            <div
+              className="flex justify-between items-center uppercase"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 9,
+                letterSpacing: 2.5,
+                color: BR.amber,
+                textShadow: `0 0 8px ${BR.amber}55`,
+              }}
+            >
+              <span>
+                [ EXTRACTED · {entries.length} OF {entries.length} ]
+              </span>
+            </div>
+
+            {/* Confidence strip — 4 tiles, OK count includes approved */}
+            <div className="flex gap-2.5" style={{ padding: '12px 0' }}>
+              {(
+                [
+                  { key: 'high', label: 'HIGH', color: BR.amber, glow: false },
+                  { key: 'medium', label: 'MED', color: '#d7a85c', glow: false },
+                  { key: 'low', label: 'LOW', color: BR.blood, glow: true },
+                  { key: 'ok', label: '✓ APPROVED', color: APPROVED_COLOR, glow: true },
+                ] as const
+              ).map((b) => {
+                const n = b.key === 'ok' ? approvedCount : (confCounts[b.key] ?? 0)
+                return (
+                  <div
+                    key={b.key}
+                    className="flex-1 flex justify-between items-center uppercase"
+                    style={{
+                      padding: '9px 12px',
+                      border: `1px solid ${b.color}`,
+                      fontFamily: BR.mono,
+                      fontSize: 10,
+                      color: b.color,
+                      letterSpacing: 1.5,
+                      boxShadow: b.glow && n > 0 ? `0 0 14px ${b.color}40` : 'none',
+                      background: `${b.color}08`,
+                    }}
+                  >
+                    <span>{b.label}</span>
+                    <span style={{ fontFamily: BR.display, fontSize: 14 }}>{n}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div
+              className="flex-1 min-h-0 overflow-y-auto"
+              style={{ border: `1px solid ${BR.line}`, background: BR.char }}
+            >
+              <EntriesList
+                grouped={grouped}
+                entries={entries}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                setIsAdding={setIsAdding}
+                updateMutation={updateMutation}
+                deleteMutation={deleteMutation}
+              />
+            </div>
+
+            <div className="mt-2.5">
+              {isAdding ? (
+                <AddEntryForm
+                  defaultDate={entries.length > 0 ? entries[entries.length - 1].date : ''}
+                  uploadId={uploadId!}
+                  isSaving={createMutation.isPending}
+                  onSave={(data) => createMutation.mutate(data)}
+                  onCancel={() => setIsAdding(false)}
+                />
+              ) : (
+                <AddMissingButton
+                  onClick={() => {
+                    setIsAdding(true)
+                    setEditingId(null)
+                  }}
+                />
+              )}
+            </div>
+
+            <div
+              className="mt-2 flex justify-between uppercase"
+              style={{
+                fontFamily: BR.mono,
+                fontSize: 9,
+                letterSpacing: 1.8,
+                color: BR.dim,
+              }}
+            >
+              <span>
+                {approvedCount} of {entries.length} approved
+                {lowCount > 0 ? ` · ${lowCount} flagged` : ''}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UploadSelect({
+  uploadId,
+  doneUploads,
+  onChange,
+}: {
+  uploadId: number | undefined
+  doneUploads: Upload[]
+  onChange: (id: number | undefined) => void
+}) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      style={{
+        padding: '10px 12px',
+        border: `1px solid ${BR.line}`,
+        background: BR.char,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 10,
+          letterSpacing: 2,
+          color: BR.amber,
+        }}
+      >
+        SRC
+      </span>
+      <select
+        value={uploadId ?? ''}
+        onChange={(e) => {
+          const val = e.target.value
+          onChange(val ? Number(val) : undefined)
+        }}
+        className="flex-1"
+        style={{
+          fontFamily: BR.mono,
+          fontSize: 12,
+          color: BR.text,
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          letterSpacing: 0.5,
+        }}
+      >
+        <option value="">— select an upload —</option>
+        {doneUploads.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.reviewed ? '✓ ' : ''}
+            {u.filename} ({u.entry_count ?? 0})
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function ReviewButton({
+  isReviewed,
+  pending,
+  onClick,
+  className = '',
+}: {
+  isReviewed: boolean
+  pending: boolean
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      disabled={pending}
+      onClick={onClick}
+      className={`uppercase ${className}`}
+      title={isReviewed ? 'Mark this upload as not reviewed' : 'Mark this upload as fully reviewed'}
+      style={{
+        fontFamily: BR.mono,
+        fontSize: 10,
+        letterSpacing: 2,
+        padding: '8px 14px',
+        minHeight: 36,
+        color: isReviewed ? APPROVED_COLOR : BR.amber,
+        border: `1px solid ${isReviewed ? APPROVED_COLOR : BR.amber}`,
+        background: isReviewed ? APPROVED_BG : `${BR.amber}15`,
+        textShadow: isReviewed ? `0 0 8px ${APPROVED_GLOW}` : `0 0 10px ${BR.amber}66`,
+        opacity: pending ? 0.5 : 1,
+      }}
+    >
+      {isReviewed ? '[ ✓ REVIEWED ]' : '[ REVIEWED ]'}
+    </button>
+  )
+}
+
+function RescanButton({
+  pending,
+  onClick,
+  className = '',
+}: {
+  pending: boolean
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      disabled={pending}
+      onClick={() => {
+        if (
+          confirm('Re-scan this image? Existing entries will be deleted and regenerated.')
+        ) {
+          onClick()
+        }
+      }}
+      className={`uppercase ${className}`}
+      style={{
+        fontFamily: BR.mono,
+        fontSize: 10,
+        letterSpacing: 2,
+        padding: '8px 12px',
+        minHeight: 36,
+        color: BR.amber,
+        border: `1px solid ${BR.amber}`,
+        background: 'rgba(255,179,71,0.08)',
+        opacity: pending ? 0.5 : 1,
+      }}
+    >
+      ↻ RESCAN
+    </button>
+  )
+}
+
+function WipeButton({
+  pending,
+  onClick,
+  className = '',
+}: {
+  pending: boolean
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      disabled={pending}
+      onClick={() => {
+        if (
+          confirm(
+            'Wipe this upload? The image and all its entries will be permanently deleted.',
+          )
+        ) {
+          onClick()
+        }
+      }}
+      className={`uppercase ${className}`}
+      style={{
+        fontFamily: BR.mono,
+        fontSize: 10,
+        letterSpacing: 2,
+        padding: '8px 12px',
+        minHeight: 36,
+        color: BR.blood,
+        border: `1px solid ${BR.blood}`,
+        background: 'rgba(255,77,77,0.08)',
+        opacity: pending ? 0.5 : 1,
+      }}
+    >
+      ✕ WIPE
+    </button>
+  )
+}
+
+function AddMissingButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      className="w-full uppercase"
+      onClick={onClick}
+      style={{
+        padding: '12px',
+        border: `1px dashed ${BR.amber}`,
+        color: BR.amber,
+        fontFamily: BR.mono,
+        fontSize: 11,
+        letterSpacing: 2,
+        background: 'rgba(255,179,71,0.02)',
+        minHeight: 44,
+      }}
+    >
+      ＋ ADD MISSING ENTRY
+    </button>
+  )
+}
+
+function StatusMessage({
+  uploadId,
+  detail,
+}: {
+  uploadId: number | undefined
+  detail: UploadDetail | undefined
+}) {
+  if (!uploadId) {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <p
+          className="uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          Select an upload to review
+        </p>
+      </div>
+    )
+  }
+  if (detail?.status === 'processing') {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <p
+          className="uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 2.5,
+            color: BR.cyan,
+            textShadow: `0 0 8px ${BR.cyanGlow}`,
+          }}
+        >
+          ▓▓▓▓░░░ SCANNING…
+        </p>
+      </div>
+    )
+  }
+  if (detail?.status === 'pending') {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <p
+          className="uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          ░░░ QUEUED
+        </p>
+      </div>
+    )
+  }
+  if (detail?.status === 'failed') {
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center px-5">
+        <p
+          className="text-center uppercase"
+          style={{
+            fontFamily: BR.mono,
+            fontSize: 11,
+            letterSpacing: 1.5,
+            color: BR.blood,
+          }}
+        >
+          [ERR] {detail.error_message}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
+function EntriesList({
+  grouped,
+  entries,
+  editingId,
+  setEditingId,
+  setIsAdding,
+  updateMutation,
+  deleteMutation,
+}: {
+  grouped: Record<string, Entry[]>
+  entries: Entry[]
+  editingId: number | null
+  setEditingId: (id: number | null) => void
+  setIsAdding: (v: boolean) => void
+  updateMutation: UpdateMutation
+  deleteMutation: DeleteMutation
+}) {
+  return (
+    <div style={{ border: `1px solid ${BR.line}`, background: BR.char }}>
+      {Object.entries(grouped).map(([date, dayEntries]) => (
+        <div key={date}>
+          <div
+            className="uppercase"
+            style={{
+              padding: '8px 14px',
+              fontFamily: BR.mono,
+              fontSize: 9,
+              letterSpacing: 2.5,
+              color: BR.dim,
+              borderBottom: `1px dashed ${BR.line}`,
+              background: 'rgba(255,179,71,0.04)',
+            }}
+          >
+            ░ {date}
+          </div>
+          {dayEntries.map((entry) => (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              isEditing={editingId === entry.id}
+              onEdit={() => {
+                setEditingId(entry.id)
+                setIsAdding(false)
+              }}
+              onCancel={() => setEditingId(null)}
+              onSave={(data) => updateMutation.mutate({ id: entry.id, ...data })}
+              onConfirm={() =>
+                updateMutation.mutate({
+                  id: entry.id,
+                  confirmed: !entry.confirmed,
+                })
+              }
+              onDelete={() => {
+                if (confirm('Delete this entry?')) {
+                  deleteMutation.mutate(entry.id)
+                }
+              }}
+              isSaving={updateMutation.isPending}
+            />
+          ))}
+        </div>
+      ))}
+      {entries.length === 0 && (
+        <p
+          className="text-center py-4 uppercase"
+          style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
+        >
+          no entries
+        </p>
       )}
     </div>
   )
