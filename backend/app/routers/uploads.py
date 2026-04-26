@@ -13,6 +13,7 @@ from app.models.upload import (
     UploadListItem,
     UploadListResponse,
     UploadResponse,
+    UploadUpdate,
 )
 from app.services.upload_processor import process_upload
 
@@ -107,6 +108,8 @@ async def list_uploads(status: str | None = None) -> UploadListResponse:
                 date_counts=date_counts_map.get(row["id"], {}),
                 created_at=row["created_at"],
                 processed_at=row["processed_at"],
+                reviewed=bool(row["reviewed"]),
+                reviewed_at=row["reviewed_at"],
             )
             for row in rows
         ]
@@ -134,6 +137,8 @@ async def get_upload(upload_id: int) -> UploadDetailResponse:
         error_message=upload["error_message"],
         created_at=upload["created_at"],
         processed_at=upload["processed_at"],
+        reviewed=bool(upload["reviewed"]),
+        reviewed_at=upload["reviewed_at"],
         entries=[
             EntryResponse(
                 id=e["id"],
@@ -170,6 +175,66 @@ async def get_upload_image(upload_id: int) -> FileResponse:
         raise HTTPException(status_code=404, detail="Image file not found")
 
     return FileResponse(filepath, filename=row["filename"])
+
+
+@router.patch("/{upload_id}")
+async def update_upload(upload_id: int, payload: UploadUpdate) -> UploadDetailResponse:
+    async with get_db() as db:
+        cursor = await db.execute("SELECT id FROM uploads WHERE id=?", (upload_id,))
+        if not await cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Upload not found")
+
+        if payload.reviewed is not None:
+            if payload.reviewed:
+                await db.execute(
+                    "UPDATE uploads SET reviewed=1, reviewed_at=datetime('now') WHERE id=?",
+                    (upload_id,),
+                )
+            else:
+                await db.execute(
+                    "UPDATE uploads SET reviewed=0, reviewed_at=NULL WHERE id=?",
+                    (upload_id,),
+                )
+            await db.commit()
+
+        cursor = await db.execute("SELECT * FROM uploads WHERE id=?", (upload_id,))
+        upload = await cursor.fetchone()
+        assert upload is not None
+
+        cursor = await db.execute(
+            "SELECT * FROM entries WHERE upload_id=? ORDER BY occurred_at ASC",
+            (upload_id,),
+        )
+        entry_rows = await cursor.fetchall()
+
+    return UploadDetailResponse(
+        id=upload["id"],
+        filename=upload["filename"],
+        status=upload["status"],
+        error_message=upload["error_message"],
+        created_at=upload["created_at"],
+        processed_at=upload["processed_at"],
+        reviewed=bool(upload["reviewed"]),
+        reviewed_at=upload["reviewed_at"],
+        entries=[
+            EntryResponse(
+                id=e["id"],
+                upload_id=e["upload_id"],
+                entry_type=e["entry_type"],
+                subtype=e["subtype"],
+                occurred_at=e["occurred_at"],
+                date=e["date"],
+                value=e["value"],
+                notes=e["notes"],
+                confidence=e["confidence"],
+                raw_text=e["raw_text"],
+                confirmed=bool(e["confirmed"]),
+                created_at=e["created_at"],
+                updated_at=e["updated_at"],
+            )
+            for e in entry_rows
+        ],
+    )
 
 
 @router.delete("/{upload_id}", status_code=204)
@@ -210,7 +275,8 @@ async def reprocess_upload(upload_id: int, background_tasks: BackgroundTasks) ->
         # Delete old entries and reset status
         await db.execute("DELETE FROM entries WHERE upload_id=?", (upload_id,))
         await db.execute(
-            "UPDATE uploads SET status='pending', error_message=NULL, processed_at=NULL WHERE id=?",
+            "UPDATE uploads SET status='pending', error_message=NULL, processed_at=NULL,"
+            " reviewed=0, reviewed_at=NULL WHERE id=?",
             (upload_id,),
         )
         await db.commit()

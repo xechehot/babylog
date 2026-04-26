@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS uploads (
     status          TEXT NOT NULL DEFAULT 'pending',
     error_message   TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    processed_at    TEXT
+    processed_at    TEXT,
+    reviewed        INTEGER NOT NULL DEFAULT 0,
+    reviewed_at     TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_uploads_status ON uploads(status);
@@ -54,6 +56,15 @@ async def _migrate(db: aiosqlite.Connection) -> None:
     columns = {row[1] for row in await cursor.fetchall()}
     if "confirmed" not in columns:
         await db.execute("ALTER TABLE entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0")
+        await db.commit()
+
+    cursor = await db.execute("PRAGMA table_info(uploads)")
+    upload_columns = {row[1] for row in await cursor.fetchall()}
+    if "reviewed" not in upload_columns:
+        await db.execute("ALTER TABLE uploads ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0")
+        await db.commit()
+    if "reviewed_at" not in upload_columns:
+        await db.execute("ALTER TABLE uploads ADD COLUMN reviewed_at TEXT")
         await db.commit()
 
 

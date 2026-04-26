@@ -195,3 +195,68 @@ async def test_reprocess_upload_rejects_pending(client: AsyncClient):
 
     resp = await client.post(f"/api/uploads/{upload_id}/reprocess")
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_mark_upload_reviewed_toggle(client: AsyncClient):
+    with patch("app.routers.uploads.process_upload", new_callable=AsyncMock):
+        create_resp = await client.post(
+            "/api/uploads",
+            files={"file": ("review.jpg", b"data", "image/jpeg")},
+        )
+    upload_id = create_resp.json()["id"]
+
+    # Default: not reviewed
+    detail = (await client.get(f"/api/uploads/{upload_id}")).json()
+    assert detail["reviewed"] is False
+    assert detail["reviewed_at"] is None
+
+    # Mark reviewed
+    resp = await client.patch(f"/api/uploads/{upload_id}", json={"reviewed": True})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reviewed"] is True
+    assert body["reviewed_at"] is not None
+
+    # Visible in list
+    listed = (await client.get("/api/uploads")).json()["uploads"]
+    assert listed[0]["reviewed"] is True
+    assert listed[0]["reviewed_at"] is not None
+
+    # Unmark
+    resp = await client.patch(f"/api/uploads/{upload_id}", json={"reviewed": False})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reviewed"] is False
+    assert body["reviewed_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_mark_upload_reviewed_not_found(client: AsyncClient):
+    resp = await client.patch("/api/uploads/9999", json={"reviewed": True})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reprocess_clears_reviewed_flag(client: AsyncClient):
+    with patch("app.routers.uploads.process_upload", new_callable=AsyncMock):
+        create_resp = await client.post(
+            "/api/uploads",
+            files={"file": ("rescan2.jpg", b"data", "image/jpeg")},
+        )
+        upload_id = create_resp.json()["id"]
+
+        async with get_db() as db:
+            await db.execute("UPDATE uploads SET status='done' WHERE id=?", (upload_id,))
+            await db.commit()
+
+        await client.patch(f"/api/uploads/{upload_id}", json={"reviewed": True})
+        detail = (await client.get(f"/api/uploads/{upload_id}")).json()
+        assert detail["reviewed"] is True
+
+        resp = await client.post(f"/api/uploads/{upload_id}/reprocess")
+        assert resp.status_code == 200
+
+    detail = (await client.get(f"/api/uploads/{upload_id}")).json()
+    assert detail["reviewed"] is False
+    assert detail["reviewed_at"] is None

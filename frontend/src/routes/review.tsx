@@ -123,6 +123,15 @@ function ReviewPage() {
     },
   })
 
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, reviewed }: { id: number; reviewed: boolean }) =>
+      api.patch<UploadDetail>(`/api/uploads/${id}`, { reviewed }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['uploads'] })
+      queryClient.invalidateQueries({ queryKey: ['upload', uploadId] })
+    },
+  })
+
   const doneUploads = (uploadsQuery.data?.uploads ?? []).filter((u) => u.status === 'done')
   const detail = detailQuery.data
   const entries = detail?.entries ?? []
@@ -148,6 +157,7 @@ function ReviewPage() {
   const flagStr = lowCount > 0 ? `${lowCount} FLAG` : '0 FLAGS'
 
   const currentUpload = detail ? doneUploads.find((u) => u.id === uploadId) : null
+  const isReviewed = detail?.reviewed ?? false
 
   return (
     <div
@@ -169,6 +179,7 @@ function ReviewPage() {
             currentUpload?.filename ?? (uploadId ? `UPLOAD #${uploadId}` : 'SELECT UPLOAD'),
             `${entries.length} RECORDS`,
             flagStr,
+            ...(isReviewed ? ['✓ REVIEWED'] : []),
           ]}
         />
 
@@ -214,6 +225,7 @@ function ReviewPage() {
               <option value="">— select an upload —</option>
               {doneUploads.map((u) => (
                 <option key={u.id} value={u.id}>
+                  {u.reviewed ? '✓ ' : ''}
                   {u.filename} ({u.entry_count ?? 0})
                 </option>
               ))}
@@ -221,6 +233,37 @@ function ReviewPage() {
           </div>
           {uploadId && detail && (detail.status === 'done' || detail.status === 'failed') && (
             <div className="flex gap-2 mt-2">
+              {detail.status === 'done' && (
+                <button
+                  disabled={
+                    reviewMutation.isPending ||
+                    rescanMutation.isPending ||
+                    wipeMutation.isPending
+                  }
+                  onClick={() => reviewMutation.mutate({ id: uploadId, reviewed: !isReviewed })}
+                  className="flex-1 uppercase"
+                  title={isReviewed ? 'Mark this upload as not reviewed' : 'Mark this upload as fully reviewed'}
+                  style={{
+                    fontFamily: BR.mono,
+                    fontSize: 10,
+                    letterSpacing: 2,
+                    padding: '8px 10px',
+                    minHeight: 36,
+                    color: isReviewed ? APPROVED_COLOR : BR.dim,
+                    border: `1px solid ${isReviewed ? APPROVED_COLOR : BR.line}`,
+                    background: isReviewed ? APPROVED_BG : 'transparent',
+                    textShadow: isReviewed ? `0 0 8px ${APPROVED_GLOW}` : 'none',
+                    opacity:
+                      reviewMutation.isPending ||
+                      rescanMutation.isPending ||
+                      wipeMutation.isPending
+                        ? 0.5
+                        : 1,
+                  }}
+                >
+                  {isReviewed ? '✓ REVIEWED' : '✓ MARK REVIEWED'}
+                </button>
+              )}
               <button
                 disabled={rescanMutation.isPending || wipeMutation.isPending}
                 onClick={() => {

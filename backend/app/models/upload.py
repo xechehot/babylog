@@ -19,6 +19,8 @@ class UploadListItem(BaseModel):
     date_counts: dict[str, int] = {}
     created_at: str
     processed_at: str | None = None
+    reviewed: bool = False
+    reviewed_at: str | None = None
 
 
 class UploadListResponse(BaseModel):
@@ -32,4 +34,10 @@ class UploadDetailResponse(BaseModel):
     error_message: str | None = None
     created_at: str
     processed_at: str | None = None
+    reviewed: bool = False
+    reviewed_at: str | None = None
     entries: list[EntryResponse] = []
+
+
+class UploadUpdate(BaseModel):
+    reviewed: bool | None = None

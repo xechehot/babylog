@@ -14,6 +14,8 @@ export interface Upload {
   date_counts?: Record<string, number>
   created_at: string
   processed_at: string | null
+  reviewed: boolean
+  reviewed_at: string | null
 }
 
 export interface Entry {
@@ -39,6 +41,8 @@ export interface UploadDetail {
   error_message: string | null
   created_at: string
   processed_at: string | null
+  reviewed: boolean
+  reviewed_at: string | null
   entries: Entry[]
 }
 
