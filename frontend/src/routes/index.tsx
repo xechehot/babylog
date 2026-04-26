@@ -21,6 +21,8 @@ const STATUS_PALETTE: Record<string, { color: string; label: string }> = {
   failed: { color: BR.blood, label: 'REJECTED' },
 }
 
+const REVIEWED_PALETTE = { color: '#7fe0a4', label: 'PASSED' }
+
 function formatDateCounts(dateCounts: Record<string, number>): string {
   const entries = Object.entries(dateCounts)
   const MAX_DATES = 3
@@ -257,7 +259,10 @@ function UploadPage() {
             </div>
           )}
           {uploads.map((upload) => {
-            const palette = STATUS_PALETTE[upload.status] ?? STATUS_PALETTE.pending
+            const palette =
+              upload.status === 'done' && upload.reviewed
+                ? REVIEWED_PALETTE
+                : STATUS_PALETTE[upload.status] ?? STATUS_PALETTE.pending
             const ts = upload.date_counts
               ? formatDateCounts(upload.date_counts)
               : `${upload.entry_count ?? 0} entries`
