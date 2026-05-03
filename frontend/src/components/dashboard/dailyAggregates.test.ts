@@ -34,7 +34,12 @@ describe('computeDailyBreastCount', () => {
     const entries = [
       makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T08:00:00' }),
       makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T11:00:00' }),
-      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-10T14:00:00', value: 60 }),
+      makeEntry({
+        entry_type: 'feeding',
+        subtype: 'formula',
+        occurred_at: '2026-03-10T14:00:00',
+        value: 60,
+      }),
     ]
     const result = computeDailyBreastCount(entries)
     expect(result).toHaveLength(1)
