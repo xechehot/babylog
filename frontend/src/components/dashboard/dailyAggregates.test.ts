@@ -3,7 +3,7 @@ import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
   computeDailyAvgDiaperInterval,
-  computeDailyAvgFeedingSpeed,
+  computeDailyBreastCount,
 } from './dailyAggregates'
 import type { Entry } from '../../types'
 
@@ -25,30 +25,32 @@ function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type
   }
 }
 
-describe('computeDailyAvgFeedingSpeed', () => {
+describe('computeDailyBreastCount', () => {
   it('returns empty for no entries', () => {
-    expect(computeDailyAvgFeedingSpeed([])).toEqual([])
+    expect(computeDailyBreastCount([])).toEqual([])
   })
 
-  it('computes total_ml / 24 per day', () => {
+  it('counts only breast feeding entries per day', () => {
     const entries = [
-      makeEntry({
-        entry_type: 'feeding',
-        subtype: 'breast',
-        occurred_at: '2026-03-10T08:00:00',
-        value: 240,
-      }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T08:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T11:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'formula', occurred_at: '2026-03-10T14:00:00', value: 60 }),
     ]
-    const result = computeDailyAvgFeedingSpeed(entries)
+    const result = computeDailyBreastCount(entries)
     expect(result).toHaveLength(1)
-    expect(result[0].value).toBe(10) // 240 / 24
+    expect(result[0].value).toBe(2)
   })
 
-  it('ignores non-feeding entries', () => {
+  it('groups by date and sorts ascending', () => {
     const entries = [
-      makeEntry({ entry_type: 'diaper', subtype: 'pee', occurred_at: '2026-03-10T08:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-11T08:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T08:00:00' }),
+      makeEntry({ entry_type: 'feeding', subtype: 'breast', occurred_at: '2026-03-10T12:00:00' }),
     ]
-    expect(computeDailyAvgFeedingSpeed(entries)).toEqual([])
+    const result = computeDailyBreastCount(entries)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ date: '2026-03-10', value: 2 })
+    expect(result[1]).toEqual({ date: '2026-03-11', value: 1 })
   })
 })
 

@@ -43,22 +43,6 @@ export function computeDailyAvgDiaperInterval(entries: Entry[]): DailyValue[] {
   return averageGapsByDate(diapers)
 }
 
-/**
- * Average feeding speed per day (ml/h) = total_ml / 24.
- */
-export function computeDailyAvgFeedingSpeed(entries: Entry[]): DailyValue[] {
-  const byDate = new Map<string, number>()
-
-  for (const e of entries) {
-    if (e.entry_type !== 'feeding' || e.value == null || e.value <= 0) continue
-    byDate.set(e.date, (byDate.get(e.date) ?? 0) + e.value)
-  }
-
-  return [...byDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, totalMl]) => ({ date, value: totalMl / 24 }))
-}
-
 function averageGapsByDate(sorted: { occurred_at: string; date: string }[]): DailyValue[] {
   const byDate = new Map<string, number[]>()
 
