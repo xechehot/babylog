@@ -80,3 +80,17 @@ function averageGapsByDate(sorted: { occurred_at: string; date: string }[]): Dai
       value: gaps.reduce((s, v) => s + v, 0) / gaps.length,
     }))
 }
+
+/**
+ * Number of breast feeding sessions per day.
+ */
+export function computeDailyBreastCount(entries: Entry[]): DailyValue[] {
+  const byDate = new Map<string, number>()
+  for (const e of entries) {
+    if (e.entry_type !== 'feeding' || e.subtype !== 'breast') continue
+    byDate.set(e.date, (byDate.get(e.date) ?? 0) + 1)
+  }
+  return [...byDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, value]) => ({ date, value }))
+}
