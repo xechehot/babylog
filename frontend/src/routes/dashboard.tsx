@@ -183,10 +183,6 @@ function DashboardPage() {
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
-              <ChartArea>
-                <FeedingByHourChart entries={feedingData.entries} />
-              </ChartArea>
-
               <Rule label="INTAKE · VELOCITY + GAPS" />
               <ChartArea>
                 <FeedingSpeedChart entries={feedingData.entries} />
@@ -273,6 +269,15 @@ function DashboardPage() {
                   birthDate={profile.birth_date}
                   birthWeight={profile.birth_weight}
                 />
+              </ChartArea>
+            </>
+          )}
+
+          {feedingData && feedingData.entries.length > 0 && (
+            <>
+              <Rule label="INTAKE · BY HOUR" />
+              <ChartArea>
+                <FeedingByHourChart entries={feedingData.entries} />
               </ChartArea>
             </>
           )}
