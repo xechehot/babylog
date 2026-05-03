@@ -24,7 +24,6 @@ import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
   computeDailyAvgDiaperInterval,
-  computeDailyAvgFeedingSpeed,
 } from '../components/dashboard/dailyAggregates'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 import { PeriodAverages } from '../components/dashboard/PeriodAverages.tsx'
@@ -192,19 +191,6 @@ function DashboardPage() {
                 <FeedingSpeedChart entries={feedingData.entries} />
                 <FeedingGapChart entries={feedingData.entries} />
               </ChartArea>
-
-              {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
-                <>
-                  <SubKicker label="avg intake · ml/h" accent={BR.cyan} />
-                  <ChartArea>
-                    <DailyAvgBarChart
-                      data={computeDailyAvgFeedingSpeed(feedingData.entries)}
-                      color={COLORS.blue400}
-                      formatValue={(v) => Math.round(v).toString()}
-                    />
-                  </ChartArea>
-                </>
-              )}
 
               {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
                 <>
