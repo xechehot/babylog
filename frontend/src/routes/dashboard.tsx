@@ -16,6 +16,7 @@ import { DiaperChart } from '../components/dashboard/DiaperChart'
 import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { WeightChart } from '../components/dashboard/WeightChart'
+import { WeeklyGainBarChart } from '../components/dashboard/WeeklyGainBarChart'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
@@ -267,6 +268,11 @@ function DashboardPage() {
                   birthDate={profile.birth_date}
                   birthWeight={profile.birth_weight}
                   sex={profile.sex}
+                />
+                <WeeklyGainBarChart
+                  entries={weightData.entries}
+                  birthDate={profile.birth_date}
+                  birthWeight={profile.birth_weight}
                 />
               </ChartArea>
             </>
