@@ -24,7 +24,7 @@ import {
   computeDailyAvgFeedingInterval,
   computeDailyAvgBreastInterval,
   computeDailyAvgDiaperInterval,
-  computeDailyAvgFeedingSpeed,
+  computeDailyBreastCount,
 } from '../components/dashboard/dailyAggregates'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
 import { PeriodAverages } from '../components/dashboard/PeriodAverages.tsx'
@@ -183,28 +183,11 @@ function DashboardPage() {
 
           {feedingData && feedingData.entries.length > 0 && (
             <>
-              <ChartArea>
-                <FeedingByHourChart entries={feedingData.entries} />
-              </ChartArea>
-
               <Rule label="INTAKE · VELOCITY + GAPS" />
               <ChartArea>
                 <FeedingSpeedChart entries={feedingData.entries} />
                 <FeedingGapChart entries={feedingData.entries} />
               </ChartArea>
-
-              {computeDailyAvgFeedingSpeed(feedingData.entries).length > 0 && (
-                <>
-                  <SubKicker label="avg intake · ml/h" accent={BR.cyan} />
-                  <ChartArea>
-                    <DailyAvgBarChart
-                      data={computeDailyAvgFeedingSpeed(feedingData.entries)}
-                      color={COLORS.blue400}
-                      formatValue={(v) => Math.round(v).toString()}
-                    />
-                  </ChartArea>
-                </>
-              )}
 
               {computeDailyAvgFeedingInterval(feedingData.entries).length > 0 && (
                 <>
@@ -226,6 +209,18 @@ function DashboardPage() {
                     <DailyAvgBarChart
                       data={computeDailyAvgBreastInterval(feedingData.entries)}
                       color={COLORS.pink400}
+                    />
+                  </ChartArea>
+                </>
+              )}
+              {computeDailyBreastCount(feedingData.entries).length > 0 && (
+                <>
+                  <SubKicker label="breast feedings · per day" accent={BR.rose} />
+                  <ChartArea>
+                    <DailyAvgBarChart
+                      data={computeDailyBreastCount(feedingData.entries)}
+                      color={COLORS.pink400}
+                      formatValue={(v) => Math.round(v).toString()}
                     />
                   </ChartArea>
                 </>
@@ -274,6 +269,15 @@ function DashboardPage() {
                   birthDate={profile.birth_date}
                   birthWeight={profile.birth_weight}
                 />
+              </ChartArea>
+            </>
+          )}
+
+          {feedingData && feedingData.entries.length > 0 && (
+            <>
+              <Rule label="INTAKE · BY HOUR" />
+              <ChartArea>
+                <FeedingByHourChart entries={feedingData.entries} />
               </ChartArea>
             </>
           )}
