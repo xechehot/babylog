@@ -8,7 +8,7 @@ export interface WeightRow {
   weightGrams: number
   days: number | null       // null = unknown (no birth_date for first row)
   gainGrams: number | null  // null for birth row
-  pctBirth: number | null   // null for birth row
+  pctPrev: number | null    // null for birth row; % change from previous entry
   gPerWeek: number | null   // null for birth row, or when days <= 0
   isBirth: boolean
 }
@@ -33,7 +33,7 @@ export function buildWeightRows(
     weightGrams: birthWeight,
     days: null,
     gainGrams: null,
-    pctBirth: null,
+    pctPrev: null,
     gPerWeek: null,
     isBirth: true,
   }
@@ -47,7 +47,7 @@ export function buildWeightRows(
 
     const days = prevDate != null ? daysBetween(prevDate, entry.date) : null
     const gainGrams = entry.value! - prevWeight
-    const pctBirth = ((entry.value! - birthWeight) / birthWeight) * 100
+    const pctPrev = (gainGrams / prevWeight) * 100
     const gPerWeek = days != null && days > 0 ? Math.round((gainGrams / days) * 7) : null
 
     rows.push({
@@ -55,7 +55,7 @@ export function buildWeightRows(
       weightGrams: entry.value!,
       days,
       gainGrams,
-      pctBirth,
+      pctPrev,
       gPerWeek,
       isBirth: false,
     })
@@ -129,7 +129,7 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            {['DATE', 'WEIGHT', 'DAYS', '+G', '% BIRTH', 'G/WK'].map((h) => (
+            {['DATE', 'WEIGHT', 'DAYS', '+G', '%∆', 'G/WK'].map((h) => (
               <th key={h} scope="col" style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}>
                 {h}
               </th>
@@ -139,7 +139,7 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
         <tbody>
           {rows.map((row, i) => {
             const gain = fmtGain(row.gainGrams)
-            const pct = fmtPct(row.pctBirth)
+            const pct = fmtPct(row.pctPrev)
             const gpw = fmtGPerWeek(row.gPerWeek)
             return (
               <tr key={row.isBirth ? 'birth' : (row.dateStr ?? String(i))} style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}>

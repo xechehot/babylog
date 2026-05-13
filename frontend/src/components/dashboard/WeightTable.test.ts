@@ -28,7 +28,7 @@ describe('buildWeightRows', () => {
     expect(rows[0].weightGrams).toBe(3200)
     expect(rows[0].dateStr).toBe('2024-01-15')
     expect(rows[0].gainGrams).toBeNull()
-    expect(rows[0].pctBirth).toBeNull()
+    expect(rows[0].pctPrev).toBeNull()
     expect(rows[0].gPerWeek).toBeNull()
     expect(rows[0].days).toBeNull()
   })
@@ -42,7 +42,7 @@ describe('buildWeightRows', () => {
     expect(row.weightGrams).toBe(3500)
     expect(row.days).toBe(7)
     expect(row.gainGrams).toBe(300)
-    expect(row.pctBirth).toBeCloseTo(9.375, 2)
+    expect(row.pctPrev).toBeCloseTo(9.375, 2)
     expect(row.gPerWeek).toBe(300) // 300g in 7 days = 300 g/week
   })
 
@@ -53,7 +53,7 @@ describe('buildWeightRows', () => {
     const row = rows[2]
     expect(row.days).toBe(14)
     expect(row.gainGrams).toBe(600)
-    expect(row.pctBirth).toBeCloseTo(28.125, 2) // (4100-3200)/3200*100
+    expect(row.pctPrev).toBeCloseTo(17.143, 2) // (4100-3500)/3500*100
     expect(row.gPerWeek).toBe(300) // 600g / 14 days * 7 = 300 g/week
   })
 
@@ -105,7 +105,7 @@ describe('buildWeightRows', () => {
     const entries = [makeWeight('2024-01-22', 3000)]
     const rows = buildWeightRows(entries, 3200, '2024-01-15')
     expect(rows[1].gainGrams).toBe(-200)
-    expect(rows[1].pctBirth).toBeCloseTo(-6.25, 2)
+    expect(rows[1].pctPrev).toBeCloseTo(-6.25, 2)
     expect(rows[1].gPerWeek).toBe(-200) // -200g in 7 days = -200 g/week
   })
 })
