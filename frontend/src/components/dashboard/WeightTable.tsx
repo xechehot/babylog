@@ -112,7 +112,7 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
     fontSize: 9,
     letterSpacing: 2,
     color: BR.dim,
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     paddingBottom: 4,
     paddingTop: 2,
   }
@@ -130,7 +130,7 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
         <thead>
           <tr>
             {['DATE', 'WEIGHT', 'DAYS', '+G', '% BIRTH', 'G/WK'].map((h) => (
-              <th key={h} style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}>
+              <th key={h} scope="col" style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}>
                 {h}
               </th>
             ))}
@@ -142,7 +142,7 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
             const pct = fmtPct(row.pctBirth)
             const gpw = fmtGPerWeek(row.gPerWeek)
             return (
-              <tr key={i} style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}>
+              <tr key={row.isBirth ? 'birth' : (row.dateStr ?? String(i))} style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}>
                 <td style={{ ...cellStyle, color: row.isBirth ? BR.rose : 'rgba(215,200,180,0.7)', paddingRight: 8 }}>
                   {row.dateStr ? formatDateRu(row.dateStr) : '—'}
                   {row.isBirth && (
