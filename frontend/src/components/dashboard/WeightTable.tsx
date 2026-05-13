@@ -4,12 +4,12 @@ import { formatDateRu } from './utils'
 import type { Entry } from '../../types'
 
 export interface WeightRow {
-  dateStr: string | null    // YYYY-MM-DD for display; null if birth row and no birth_date
+  dateStr: string | null // YYYY-MM-DD for display; null if birth row and no birth_date
   weightGrams: number
-  days: number | null       // null = unknown (no birth_date for first row)
-  gainGrams: number | null  // null for birth row
-  pctPrev: number | null    // null for birth row; % change from previous entry
-  gPerWeek: number | null   // null for birth row, or when days <= 0
+  days: number | null // null = unknown (no birth_date for first row)
+  gainGrams: number | null // null for birth row
+  pctPrev: number | null // null for birth row; % change from previous entry
+  gPerWeek: number | null // null for birth row, or when days <= 0
   isBirth: boolean
 }
 
@@ -130,7 +130,11 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
         <thead>
           <tr>
             {['DATE', 'WEIGHT', 'DAYS', '+G', '%∆', 'G/WK'].map((h) => (
-              <th key={h} scope="col" style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}>
+              <th
+                key={h}
+                scope="col"
+                style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}
+              >
                 {h}
               </th>
             ))}
@@ -142,8 +146,17 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
             const pct = fmtPct(row.pctPrev)
             const gpw = fmtGPerWeek(row.gPerWeek)
             return (
-              <tr key={row.isBirth ? 'birth' : (row.dateStr ?? String(i))} style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}>
-                <td style={{ ...cellStyle, color: row.isBirth ? BR.rose : 'rgba(215,200,180,0.7)', paddingRight: 8 }}>
+              <tr
+                key={row.isBirth ? 'birth' : (row.dateStr ?? String(i))}
+                style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}
+              >
+                <td
+                  style={{
+                    ...cellStyle,
+                    color: row.isBirth ? BR.rose : 'rgba(215,200,180,0.7)',
+                    paddingRight: 8,
+                  }}
+                >
                   {row.dateStr ? formatDateRu(row.dateStr) : '—'}
                   {row.isBirth && (
                     <span style={{ color: BR.dim, marginLeft: 4, fontSize: 9 }}>★</span>
@@ -155,15 +168,9 @@ export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProp
                 <td style={{ ...cellStyle, color: BR.dim, paddingRight: 8 }}>
                   {row.days != null ? row.days : '—'}
                 </td>
-                <td style={{ ...cellStyle, color: gain.color, paddingRight: 8 }}>
-                  {gain.text}
-                </td>
-                <td style={{ ...cellStyle, color: pct.color, paddingRight: 8 }}>
-                  {pct.text}
-                </td>
-                <td style={{ ...cellStyle, color: gpw.color }}>
-                  {gpw.text}
-                </td>
+                <td style={{ ...cellStyle, color: gain.color, paddingRight: 8 }}>{gain.text}</td>
+                <td style={{ ...cellStyle, color: pct.color, paddingRight: 8 }}>{pct.text}</td>
+                <td style={{ ...cellStyle, color: gpw.color }}>{gpw.text}</td>
               </tr>
             )
           })}
