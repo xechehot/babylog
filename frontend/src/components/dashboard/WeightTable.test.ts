@@ -4,7 +4,7 @@ import type { Entry } from '../../types'
 
 function makeWeight(date: string, grams: number): Entry {
   return {
-    id: 1,
+    id: 0,
     upload_id: null,
     entry_type: 'weight',
     subtype: null,
@@ -62,6 +62,16 @@ describe('buildWeightRows', () => {
     const rows = buildWeightRows(entries, 3200, null)
     expect(rows[1].days).toBeNull()
     expect(rows[1].gPerWeek).toBeNull()
+  })
+
+  it('computes days normally for second entry even when birth_date is null', () => {
+    const entries = [makeWeight('2024-01-22', 3500), makeWeight('2024-02-05', 4100)]
+    const rows = buildWeightRows(entries, 3200, null)
+    // first entry: days null (no birthDate)
+    expect(rows[1].days).toBeNull()
+    // second entry: days from first entry's date (14 days), computed normally
+    expect(rows[2].days).toBe(14)
+    expect(rows[2].gPerWeek).toBe(300) // 600g / 14 days * 7
   })
 
   it('sets gPerWeek to null when days is 0', () => {

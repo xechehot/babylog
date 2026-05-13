@@ -1,7 +1,4 @@
-import type { CSSProperties } from 'react'
 import type { Entry } from '../../types'
-import { BR } from '../br/theme'
-import { formatDateRu } from './utils'
 
 export interface WeightRow {
   dateStr: string | null    // YYYY-MM-DD for display; null if birth row and no birth_date
