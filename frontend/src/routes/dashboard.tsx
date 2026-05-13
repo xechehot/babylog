@@ -93,7 +93,7 @@ function DashboardPage() {
 
   const { data: allWeightData } = useQuery({
     queryKey: ['entries', { type: 'weight', all: true }],
-    queryFn: () => api.get<{ entries: Entry[] }>('/api/entries?type=weight&from_date=2000-01-01'),
+    queryFn: () => api.get<{ entries: Entry[] }>('/api/entries?type=weight&from_date=2000-01-01'), // sentinel: fetch all-time
   })
 
   const days = data?.days ?? []
