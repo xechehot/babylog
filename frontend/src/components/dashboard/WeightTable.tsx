@@ -1,3 +1,6 @@
+import type { CSSProperties } from 'react'
+import { BR } from '../br/theme'
+import { formatDateRu } from './utils'
 import type { Entry } from '../../types'
 
 export interface WeightRow {
@@ -59,4 +62,113 @@ export function buildWeightRows(
   }
 
   return rows
+}
+
+function fmtKg(grams: number): string {
+  return (grams / 1000).toFixed(3) + ' kg'
+}
+
+function fmtGain(g: number | null): { text: string; color: string } {
+  if (g === null) return { text: '—', color: BR.dim }
+  if (g === 0) return { text: '±0 g', color: BR.dim }
+  const sign = g > 0 ? '+' : '−'
+  return {
+    text: `${sign}${Math.abs(g)} g`,
+    color: g > 0 ? BR.cyan : BR.blood,
+  }
+}
+
+function fmtPct(pct: number | null): { text: string; color: string } {
+  if (pct === null) return { text: '—', color: BR.dim }
+  if (Math.abs(pct) < 0.05) return { text: '±0.0%', color: BR.dim }
+  const sign = pct > 0 ? '+' : '−'
+  return {
+    text: `${sign}${Math.abs(pct).toFixed(1)}%`,
+    color: pct > 0 ? BR.cyan : BR.blood,
+  }
+}
+
+function fmtGPerWeek(gpw: number | null): { text: string; color: string } {
+  if (gpw === null) return { text: '—', color: BR.dim }
+  if (gpw === 0) return { text: '±0', color: BR.dim }
+  const sign = gpw > 0 ? '+' : '−'
+  return {
+    text: `${sign}${Math.abs(gpw)}`,
+    color: gpw > 0 ? BR.cyan : BR.blood,
+  }
+}
+
+interface WeightTableProps {
+  entries: Entry[]
+  birthWeight: number
+  birthDate: string | null
+}
+
+export function WeightTable({ entries, birthWeight, birthDate }: WeightTableProps) {
+  const rows = buildWeightRows(entries, birthWeight, birthDate)
+
+  const headerStyle: CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: BR.dim,
+    textTransform: 'uppercase' as const,
+    paddingBottom: 4,
+    paddingTop: 2,
+  }
+
+  const cellStyle: CSSProperties = {
+    fontFamily: BR.mono,
+    fontSize: 11,
+    paddingTop: 5,
+    paddingBottom: 5,
+  }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            {['DATE', 'WEIGHT', 'DAYS', '+G', '% BIRTH', 'G/WK'].map((h) => (
+              <th key={h} style={{ ...headerStyle, textAlign: 'left', fontWeight: 400 }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const gain = fmtGain(row.gainGrams)
+            const pct = fmtPct(row.pctBirth)
+            const gpw = fmtGPerWeek(row.gPerWeek)
+            return (
+              <tr key={i} style={{ borderTop: `1px solid rgba(215,200,180,0.08)` }}>
+                <td style={{ ...cellStyle, color: row.isBirth ? BR.rose : 'rgba(215,200,180,0.7)', paddingRight: 8 }}>
+                  {row.dateStr ? formatDateRu(row.dateStr) : '—'}
+                  {row.isBirth && (
+                    <span style={{ color: BR.dim, marginLeft: 4, fontSize: 9 }}>★</span>
+                  )}
+                </td>
+                <td style={{ ...cellStyle, color: 'rgba(215,200,180,0.9)', paddingRight: 8 }}>
+                  {fmtKg(row.weightGrams)}
+                </td>
+                <td style={{ ...cellStyle, color: BR.dim, paddingRight: 8 }}>
+                  {row.days != null ? row.days : '—'}
+                </td>
+                <td style={{ ...cellStyle, color: gain.color, paddingRight: 8 }}>
+                  {gain.text}
+                </td>
+                <td style={{ ...cellStyle, color: pct.color, paddingRight: 8 }}>
+                  {pct.text}
+                </td>
+                <td style={{ ...cellStyle, color: gpw.color }}>
+                  {gpw.text}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
 }
