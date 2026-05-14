@@ -17,6 +17,7 @@ import { BreastGapChart } from '../components/dashboard/BreastGapChart'
 import { DiaperGapChart } from '../components/dashboard/DiaperGapChart'
 import { WeightChart } from '../components/dashboard/WeightChart'
 import { WeeklyGainBarChart } from '../components/dashboard/WeeklyGainBarChart'
+import { WeightTable } from '../components/dashboard/WeightTable'
 import { DailyAvgBarChart } from '../components/dashboard/DailyAvgBarChart'
 import { FeedingByHourChart } from '../components/dashboard/FeedingByHourChart'
 import { COLORS } from '../components/dashboard/chartConfig'
@@ -88,6 +89,11 @@ function DashboardPage() {
       api.get<{ entries: Entry[] }>(
         `/api/entries?type=weight&from_date=${from_date}&to_date=${to_date}`,
       ),
+  })
+
+  const { data: allWeightData } = useQuery({
+    queryKey: ['entries', { type: 'weight', all: true }],
+    queryFn: () => api.get<{ entries: Entry[] }>('/api/entries?type=weight&from_date=2000-01-01'), // sentinel: fetch all-time
   })
 
   const days = data?.days ?? []
@@ -268,6 +274,19 @@ function DashboardPage() {
                   entries={weightData.entries}
                   birthDate={profile.birth_date}
                   birthWeight={profile.birth_weight}
+                />
+              </ChartArea>
+            </>
+          )}
+
+          {allWeightData && profile.birth_weight && (
+            <>
+              <Rule label="WEIGHT · LOG" accent={BR.rose} />
+              <ChartArea>
+                <WeightTable
+                  entries={allWeightData.entries}
+                  birthWeight={profile.birth_weight}
+                  birthDate={profile.birth_date ?? null}
                 />
               </ChartArea>
             </>
