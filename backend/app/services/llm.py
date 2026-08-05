@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 
 import anthropic
+from anthropic.types import OutputConfigParam
 
 from app.config import settings
 
@@ -179,10 +180,14 @@ class LLMService:
             f"Year for dates: {year}."
         )
 
+        # max_tokens caps thinking + response text together, and adaptive thinking is on
+        # by default on Sonnet 5 — leave generous headroom so the JSON array can't truncate.
+        # Effort "medium" matches the entry extraction of the default "high" on this task
+        # at roughly half the output tokens and latency.
         response = await self.client.messages.create(
             model=self.model,
-            # Thinking is on by default on Sonnet 5 and shares this budget with the entries.
             max_tokens=16000,
+            output_config=OutputConfigParam(effort="medium"),
             system=SYSTEM_PROMPT,
             messages=[
                 {
@@ -204,6 +209,11 @@ class LLMService:
                 }
             ],
         )
+
+        # Checked before extract_response_text: a refusal can carry no text block at all,
+        # which would otherwise surface as a misleading "no text block" error.
+        if response.stop_reason == "refusal":
+            raise ValueError(f"LLM refused the request: {response.stop_details}")
 
         raw_text = extract_response_text(response.content)
         logger.info(
