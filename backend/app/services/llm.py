@@ -111,6 +111,55 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
 """
 
 
+def extract_response_text(content: list) -> str:
+    """Join the text blocks of a response.
+
+    Models with thinking enabled (the default on Sonnet 5) put a thinking block first, so
+    the text is not necessarily the first block.
+    """
+    texts = [block.text for block in content if getattr(block, "type", None) == "text"]
+    if not texts:
+        types = [getattr(block, "type", "?") for block in content]
+        raise ValueError(f"LLM response contained no text block (got {types})")
+    return "\n".join(texts)
+
+
+def extract_json_array(raw_text: str) -> list:
+    """Pull the entries array out of an LLM response.
+
+    On ambiguous pages the model narrates its reasoning before emitting the array, and it
+    sometimes wraps the array in markdown fences, so a plain json.loads is not enough.
+    """
+    text = raw_text.strip()
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    else:
+        if not isinstance(parsed, list):
+            raise ValueError(f"Expected JSON array, got {type(parsed).__name__}")
+        return parsed
+
+    decoder = json.JSONDecoder()
+    candidates = []
+    for idx, char in enumerate(text):
+        if char != "[":
+            continue
+        try:
+            value, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            continue
+        candidates.append((value, end - idx))
+
+    # Prefer arrays of objects: prose can contain arrays of bare strings that are valid JSON.
+    entry_arrays = [c for c in candidates if c[0] and all(isinstance(e, dict) for e in c[0])]
+    best = max(entry_arrays or candidates, key=lambda c: c[1], default=None)
+    if best is None:
+        raise ValueError(f"No JSON array found in LLM response: {text[:300]!r}")
+    return best[0]
+
+
 class LLMService:
     def __init__(self) -> None:
         self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -132,7 +181,8 @@ class LLMService:
 
         response = await self.client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            # Thinking is on by default on Sonnet 5 and shares this budget with the entries.
+            max_tokens=16000,
             system=SYSTEM_PROMPT,
             messages=[
                 {
@@ -155,23 +205,27 @@ class LLMService:
             ],
         )
 
-        raw_text = response.content[0].text  # type: ignore[union-attr]
-        logger.info("LLM raw response length: %d chars", len(raw_text))
+        raw_text = extract_response_text(response.content)
+        logger.info(
+            "LLM raw response: length=%d chars stop_reason=%s blocks=%s",
+            len(raw_text),
+            response.stop_reason,
+            [block.type for block in response.content],
+        )
 
-        # Strip markdown fences if present
-        text = raw_text.strip()
-        if text.startswith("```"):
-            # Remove opening fence (```json or ```)
-            first_newline = text.index("\n")
-            text = text[first_newline + 1 :]
-            # Remove closing fence
-            if text.endswith("```"):
-                text = text[: -len("```")]
-            text = text.strip()
+        if response.stop_reason == "max_tokens":
+            raise ValueError(
+                f"LLM response truncated at max_tokens after {len(raw_text)} chars of text"
+            )
 
-        entries = json.loads(text)
-        if not isinstance(entries, list):
-            raise ValueError(f"Expected JSON array, got {type(entries).__name__}")
+        if not raw_text.lstrip().startswith("["):
+            logger.info("LLM response does not start with the JSON array; extracting it")
+
+        try:
+            entries = extract_json_array(raw_text)
+        except ValueError:
+            logger.error("Unparseable LLM response (%d chars): %s", len(raw_text), raw_text[:1000])
+            raise
 
         valid_types = {"feeding", "diaper", "weight", "pills"}
         validated = []
