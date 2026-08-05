@@ -153,6 +153,23 @@ def _fit(gaps: list[NightGap]) -> tuple[float, float, float] | None:
     return y_mean - slope * x_mean, slope, covariance / (x_dev * y_dev)
 
 
+def _usable_fit(measured: list[NightGap]) -> tuple[float, float, float] | None:
+    """The fit as (intercept, slope, r) when it is trustworthy, else None.
+
+    Rejects fits that are too thin to believe, run the physically wrong way, or
+    explain too little of the variation to beat a plain median.
+    """
+    if len(measured) < MIN_REGRESSION_SAMPLE:
+        return None
+    fit = _fit(measured)
+    if fit is None:
+        return None
+    _, slope, r = fit
+    if slope <= 0 or r < MIN_CORRELATION:
+        return None
+    return fit
+
+
 def _round_to_5min(moment: datetime) -> datetime:
     remainder = timedelta(
         minutes=moment.minute % 5, seconds=moment.second, microseconds=moment.microsecond
@@ -166,8 +183,16 @@ def _round_to_5min(moment: datetime) -> datetime:
 def _select_window(
     history: list[FeedingRecord], ml: float | None, now: datetime, period: Period
 ) -> tuple[int | None, list[NightGap]]:
-    """Pick the narrowest window holding enough of the sample the estimate needs."""
-    widest: tuple[int | None, list[NightGap]] = (None, [])
+    """Pick the narrowest window that can actually answer the question.
+
+    Widening is driven by two things, not one. Too few gaps is the obvious
+    reason, but a window can also hold plenty of gaps that say nothing about
+    volume — and then reaching a wider window is the difference between the
+    entered volume mattering and being silently ignored. Recency still wins
+    when no window supports a fit: a recent median beats a stale one.
+    """
+    evaluated: list[tuple[int | None, list[NightGap]]] = []
+
     for window in CANDIDATE_WINDOWS:
         if window is None:
             records = history
@@ -176,11 +201,17 @@ def _select_window(
             records = [r for r in history if r.occurred_at >= cutoff]
 
         gaps = session_gaps(build_sessions(records), period)
-        widest = (window, gaps)
+        evaluated.append((window, gaps))
+
+        if ml is not None and _usable_fit([g for g in gaps if g.from_ml > 0]) is not None:
+            return window, gaps
+
+    for window, gaps in evaluated:
         relevant = [g for g in gaps if (g.from_ml > 0 if ml is not None else g.from_ml == 0)]
         if len(relevant) >= MIN_REGRESSION_SAMPLE:
             return window, gaps
-    return widest
+
+    return evaluated[-1]
 
 
 def _estimate_gap(gaps: list[NightGap], ml: float | None) -> tuple[float, float, float, Basis]:
@@ -195,25 +226,20 @@ def _estimate_gap(gaps: list[NightGap], ml: float | None) -> tuple[float, float,
     if ml is None:
         return (*_median_estimate(sample), "median_measured" if measured else "median_unmeasured")
 
-    if len(measured) >= MIN_REGRESSION_SAMPLE:
-        fit = _fit(measured)
-        if fit is not None:
-            intercept, slope, r = fit
-            if slope > 0 and r >= MIN_CORRELATION:
-                hours = intercept + slope * ml
-                observed = [g.hours for g in measured]
-                hours = min(
-                    max(hours, _percentile(observed, 0.10)),
-                    _percentile(observed, 0.90),
-                )
-                hours = min(max(hours, MIN_GAP_HOURS), MAX_GAP_HOURS)
-                residuals = [g.hours - (intercept + slope * g.from_ml) for g in measured]
-                return (
-                    hours,
-                    hours + _percentile(residuals, 0.25),
-                    hours + _percentile(residuals, 0.75),
-                    "regression",
-                )
+    fit = _usable_fit(measured)
+    if fit is not None:
+        intercept, slope, _ = fit
+        hours = intercept + slope * ml
+        observed = [g.hours for g in measured]
+        hours = min(max(hours, _percentile(observed, 0.10)), _percentile(observed, 0.90))
+        hours = min(max(hours, MIN_GAP_HOURS), MAX_GAP_HOURS)
+        residuals = [g.hours - (intercept + slope * g.from_ml) for g in measured]
+        return (
+            hours,
+            hours + _percentile(residuals, 0.25),
+            hours + _percentile(residuals, 0.75),
+            "regression",
+        )
 
     return (*_median_estimate(sample), "median_measured" if measured else "median_unmeasured")
 

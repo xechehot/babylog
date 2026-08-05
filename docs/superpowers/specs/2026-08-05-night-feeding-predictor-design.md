@@ -52,9 +52,14 @@ Input: `at` (datetime of the feed just given), `ml` (optional int).
 
 ### 1. Window selection
 
-Query feeding entries from the last **30 days**. If the resulting night-gap sample is fewer than **15**, widen to **60 days**. If still fewer than 15, use all history. The window actually used is reported in the response.
+Candidate windows are **30 days**, **60 days**, then all history. Widening is driven by two independent reasons:
 
-The count tested against the threshold is the sample the point estimate will actually use: **measured** night gaps when `ml` is provided, **unmeasured** night gaps when it is not.
+1. **Too few gaps** — fewer than **15** in the sample the estimate will use (**measured** gaps when `ml` is provided, **unmeasured** when it is not).
+2. **No usable fit** — the window holds enough gaps, but they say nothing about volume (fewer than 15 measured, non-positive slope, or r < 0.2).
+
+The second reason matters as much as the first. A window can be rich in data yet flat in signal, and stopping there silently ignores the volume the parent typed. Real example: the 30-day night window holds 63 measured gaps at r = 0.19, just under the guard, while the 60-day window reaches r = 0.34 — the difference between volume mattering and being discarded.
+
+When **no** window supports a fit, the narrowest window with enough gaps wins: a recent median beats a stale one. The window actually used is reported in the response.
 
 ### 2. Sessionize
 
@@ -89,7 +94,11 @@ Use the regression only when **all** of these hold:
 - b > 0 (slope must run the physically sensible direction)
 - r ≥ 0.2
 
-Otherwise fall back to the median gap of measured night sessions (`basis: "median_measured"`).
+These are the same guards window selection applies, shared through one `_usable_fit` helper so the two cannot drift apart.
+
+Otherwise fall back to the median gap of measured sessions (`basis: "median_measured"`).
+
+**Expect this fallback to be permanent for the day pool.** Daytime volume→gap correlation measures 0.11–0.20 and moves substantially with small amounts of new data, against night's stable 0.34. Daytime feeding appears to be schedule-driven rather than satiety-driven, so volume genuinely does not predict daytime spacing — the median is the right answer there, not a degraded one.
 
 Clamp the regression output to the **p10–p90** range of observed gaps, then clamp again to an absolute `[1.0h, 8.0h]`, so an extreme ml entry cannot produce an absurd time.
 

@@ -338,6 +338,44 @@ def test_window_widens_to_60_days_when_recent_sample_is_thin():
     assert result.window_days == 60
 
 
+def test_window_widens_when_the_narrow_one_has_data_but_no_usable_fit():
+    """Sample size is not the only reason to widen — a flat window is useless too.
+
+    The last 30 days hold plenty of gaps, but at a constant length, so volume
+    explains nothing. The 60-day window carries a real slope, and reaching it is
+    the difference between the entered volume mattering and being ignored.
+    """
+    recent = nights(10, days_before=2, gap_for_ml=lambda _ml: 3.8)
+    older = nights(10, days_before=35, gap_for_ml=lambda ml: 1.0 + 0.02 * ml)
+
+    result = predict_next_feeding(at=NOW, ml=150, history=recent + older, now=NOW)
+
+    assert result.window_days == 60
+    assert result.basis == "regression"
+
+
+def test_window_stays_narrow_when_it_already_supports_a_fit():
+    recent = nights(10, days_before=2, gap_for_ml=lambda ml: 1.0 + 0.02 * ml)
+    older = nights(10, days_before=35, gap_for_ml=lambda ml: 1.0 + 0.02 * ml)
+
+    result = predict_next_feeding(at=NOW, ml=150, history=recent + older, now=NOW)
+
+    assert result.window_days == 30
+    assert result.basis == "regression"
+
+
+def test_prefers_the_recent_median_when_no_window_supports_a_fit():
+    # flat everywhere: widening would only trade recent data for stale data
+    recent = nights(10, days_before=2, gap_for_ml=lambda _ml: 3.8)
+    older = nights(10, days_before=35, gap_for_ml=lambda _ml: 2.0)
+
+    result = predict_next_feeding(at=NOW, ml=150, history=recent + older, now=NOW)
+
+    assert result.window_days == 30
+    assert result.basis == "median_measured"
+    assert abs((result.predicted_at - NOW).total_seconds() / 3600 - 3.8) < 0.1
+
+
 def test_window_widens_to_all_history_when_60_days_is_still_thin():
     history = nights(10, days_before=90)
 
