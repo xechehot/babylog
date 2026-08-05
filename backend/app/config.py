@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
-    llm_model: str = "claude-sonnet-4-20250514"
+    llm_model: str = "claude-sonnet-5"
     # Default to an external location so multiple checkouts/worktrees share one data store.
     # Override via UPLOAD_DIR / DATABASE_PATH in .env. Leading ~ is expanded.
     upload_dir: str = "~/.babylog/uploads"

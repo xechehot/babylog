@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 
 import anthropic
+from anthropic.types import OutputConfigParam
 
 from app.config import settings
 
@@ -130,9 +131,14 @@ class LLMService:
             f"Year for dates: {year}."
         )
 
+        # max_tokens caps thinking + response text together, and adaptive thinking is on
+        # by default on Sonnet 5 — leave generous headroom so the JSON array can't truncate.
+        # Effort "medium" matches the entry extraction of the default "high" on this task
+        # at roughly half the output tokens and latency.
         response = await self.client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            max_tokens=16000,
+            output_config=OutputConfigParam(effort="medium"),
             system=SYSTEM_PROMPT,
             messages=[
                 {
@@ -155,7 +161,18 @@ class LLMService:
             ],
         )
 
-        raw_text = response.content[0].text  # type: ignore[union-attr]
+        if response.stop_reason == "max_tokens":
+            raise ValueError(
+                "LLM response was truncated at max_tokens; the JSON array is incomplete"
+            )
+        if response.stop_reason == "refusal":
+            raise ValueError(f"LLM refused the request: {response.stop_details}")
+
+        # Adaptive thinking puts thinking blocks ahead of the text block, so index 0
+        # is not the answer — pick the first text block out of the content list.
+        raw_text = next((b.text for b in response.content if b.type == "text"), None)
+        if raw_text is None:
+            raise ValueError(f"No text block in LLM response (stop_reason={response.stop_reason})")
         logger.info("LLM raw response length: %d chars", len(raw_text))
 
         # Strip markdown fences if present
