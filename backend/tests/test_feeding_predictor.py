@@ -1,13 +1,15 @@
-"""Unit tests for the night feeding predictor (pure module, no DB)."""
+"""Unit tests for the feeding predictor (pure module, no DB)."""
 
 from datetime import datetime, timedelta
 
 from app.services.feeding_predictor import (
     FeedingRecord,
     build_sessions,
-    night_gaps,
     predict_next_feeding,
+    session_gaps,
 )
+
+NOW = datetime(2026, 8, 5, 1, 15)
 
 
 def rec(when: str, value: float | None = None) -> FeedingRecord:
@@ -60,7 +62,7 @@ def test_session_of_only_unmeasured_entries_has_zero_total():
 
 
 def gaps_from(*times: str) -> list:
-    return night_gaps(build_sessions([rec(t, 50) for t in times]))
+    return session_gaps(build_sessions([rec(t, 50) for t in times]), "night")
 
 
 def test_night_window_includes_21_00_and_excludes_20_59():
@@ -82,7 +84,7 @@ def test_gap_is_measured_from_session_end_to_next_session_start():
         ]
     )
 
-    gaps = night_gaps(sessions)
+    gaps = session_gaps(sessions, "night")
 
     assert len(gaps) == 1
     assert gaps[0].hours == 4.0
@@ -93,19 +95,91 @@ def test_gap_is_measured_from_session_end_to_next_session_start():
 def test_gaps_longer_than_8_hours_are_dropped_as_missing_data():
     sessions = build_sessions([rec("2026-08-01T22:00", 50), rec("2026-08-02T06:01", 50)])
 
-    assert night_gaps(sessions) == []
+    assert session_gaps(sessions, "night") == []
 
 
 def test_gap_of_exactly_8_hours_is_kept():
     sessions = build_sessions([rec("2026-08-01T22:00", 50), rec("2026-08-02T06:00", 50)])
 
-    assert len(night_gaps(sessions)) == 1
+    assert len(session_gaps(sessions, "night")) == 1
+
+
+# --- day vs night pool ------------------------------------------------------
+
+
+def day_and_night_history(count: int = 10) -> list[FeedingRecord]:
+    """Nights spaced 4h apart, days spaced 2h apart, at a constant volume.
+
+    Constant volume means the fit has no x-variance, so every prediction falls
+    to the median of whichever pool was chosen — making the pool visible in the
+    predicted gap.
+    """
+    records: list[FeedingRecord] = []
+    for k in range(count):
+        midnight = (NOW - timedelta(days=2 + k)).replace(hour=0, minute=0, second=0, microsecond=0)
+        for hour in (1, 5, 9, 11, 13, 15, 17, 19, 21):
+            records.append(FeedingRecord(occurred_at=midnight.replace(hour=hour), value=120))
+    return sorted(records, key=lambda r: r.occurred_at)
+
+
+def predicted_gap_hours(at: datetime, history: list[FeedingRecord]) -> float:
+    result = predict_next_feeding(at=at, ml=120, history=history, now=NOW)
+    return (result.predicted_at - at).total_seconds() / 3600
+
+
+def test_daytime_feed_is_predicted_from_daytime_gaps():
+    history = day_and_night_history()
+
+    result = predict_next_feeding(
+        at=NOW.replace(hour=14, minute=0), ml=120, history=history, now=NOW
+    )
+
+    assert result.period == "day"
+    assert abs(predicted_gap_hours(NOW.replace(hour=14, minute=0), history) - 2.0) < 0.1
+
+
+def test_night_feed_is_predicted_from_night_gaps():
+    history = day_and_night_history()
+
+    result = predict_next_feeding(
+        at=NOW.replace(hour=1, minute=0), ml=120, history=history, now=NOW
+    )
+
+    assert result.period == "night"
+    assert abs(predicted_gap_hours(NOW.replace(hour=1, minute=0), history) - 4.0) < 0.1
+
+
+def test_07_00_uses_the_day_pool_and_06_59_uses_the_night_pool():
+    history = day_and_night_history()
+
+    assert abs(predicted_gap_hours(NOW.replace(hour=7, minute=0), history) - 2.0) < 0.1
+    assert abs(predicted_gap_hours(NOW.replace(hour=6, minute=59), history) - 4.0) < 0.1
+
+
+def test_21_00_uses_the_night_pool_and_20_59_uses_the_day_pool():
+    history = day_and_night_history()
+
+    assert abs(predicted_gap_hours(NOW.replace(hour=21, minute=0), history) - 4.0) < 0.1
+    assert abs(predicted_gap_hours(NOW.replace(hour=20, minute=59), history) - 2.0) < 0.1
+
+
+def test_day_pool_ignores_night_history_entirely():
+    # only night feeds exist, so a daytime question has nothing to answer with
+    records: list[FeedingRecord] = []
+    for k in range(10):
+        t = (NOW - timedelta(days=2 + k)).replace(hour=21, minute=0, second=0, microsecond=0)
+        for _ in range(3):
+            records.append(FeedingRecord(occurred_at=t, value=120))
+            t = t + timedelta(hours=3)
+
+    result = predict_next_feeding(
+        at=NOW.replace(hour=14, minute=0), ml=120, history=records, now=NOW
+    )
+
+    assert result.basis == "insufficient_data"
 
 
 # --- prediction: regression path -------------------------------------------
-
-
-NOW = datetime(2026, 8, 5, 1, 15)
 
 
 def nights(

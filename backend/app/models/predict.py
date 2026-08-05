@@ -9,5 +9,6 @@ class NextFeedingPrediction(BaseModel):
     ml_low: int | None = None
     ml_high: int | None = None
     basis: str
+    period: str
     sample_size: int
     window_days: int | None = None

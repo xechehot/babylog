@@ -4,7 +4,7 @@ import { BR } from './br/theme'
 const tabs = [
   { to: '/' as const, label: 'Upload', id: 'up' },
   { to: '/log' as const, label: 'Log', id: 'log' },
-  { to: '/night' as const, label: 'Night', id: 'night' },
+  { to: '/night' as const, label: 'Next', id: 'night' },
   { to: '/review' as const, label: 'Review', id: 'rev' },
   { to: '/dashboard' as const, label: 'Dashboard', id: 'dash' },
 ]

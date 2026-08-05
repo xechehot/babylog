@@ -58,7 +58,11 @@ function NightPage() {
 
   return (
     <div className="pb-28">
-      <PageHead kicker="Night" title="Next feeding" meta={['predicted from your own history']} />
+      <PageHead
+        kicker="Predictor"
+        title="Next feeding"
+        meta={['predicted from your own history']}
+      />
 
       <Rule label="last feeding" />
 
@@ -140,7 +144,9 @@ function Result({
 
   if (data.basis === 'insufficient_data' || !data.predicted_at) {
     return (
-      <Notice text="Not enough night feedings logged yet to predict. Upload a few more nights of notes and try again." />
+      <Notice
+        text={`Not enough ${data.period} feedings logged yet to predict. Upload a few more days of notes and try again.`}
+      />
     )
   }
 
@@ -197,7 +203,7 @@ function Result({
         className="mt-4 uppercase"
         style={{ fontFamily: BR.mono, fontSize: 9, letterSpacing: 1.5, color: BR.dim }}
       >
-        {data.sample_size} night gaps ·{' '}
+        {data.sample_size} {data.period} gaps ·{' '}
         {data.window_days ? `last ${data.window_days} days` : 'all history'}
       </div>
 

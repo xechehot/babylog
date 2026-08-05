@@ -91,6 +91,28 @@ async def test_larger_feed_predicts_a_later_next_feeding(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_response_reports_the_period_it_used(client: AsyncClient):
+    await seed_nights(client)
+
+    night = await client.get(ENDPOINT, params={"at": NOW.isoformat(), "ml": 150})
+    day_at = NOW.replace(hour=14, minute=0)
+    day = await client.get(ENDPOINT, params={"at": day_at.isoformat(), "ml": 150})
+
+    assert night.json()["period"] == "night"
+    assert day.json()["period"] == "day"
+
+
+@pytest.mark.asyncio
+async def test_daytime_question_is_not_answered_from_night_history(client: AsyncClient):
+    await seed_nights(client)  # night feeds only
+
+    day_at = NOW.replace(hour=14, minute=0)
+    resp = await client.get(ENDPOINT, params={"at": day_at.isoformat(), "ml": 150})
+
+    assert resp.json()["basis"] == "insufficient_data"
+
+
+@pytest.mark.asyncio
 async def test_missing_at_parameter_is_rejected(client: AsyncClient):
     resp = await client.get(ENDPOINT)
 

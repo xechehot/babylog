@@ -47,6 +47,7 @@ async def next_feeding(
         ml_low=result.ml_low,
         ml_high=result.ml_high,
         basis=result.basis,
+        period=result.period,
         sample_size=result.sample_size,
         window_days=result.window_days,
     )

@@ -1,17 +1,22 @@
-"""Predicts the next night feeding from the baby's own feeding history.
+"""Predicts the next feeding from the baby's own feeding history.
 
 Pure module: no FastAPI, no database. Takes feeding records, returns a
 prediction, so the statistics can be tested against fabricated data.
 
-The model is a recency-windowed least-squares fit of `gap ~ volume` over night
-feedings, chosen because volume genuinely predicts how long the baby then
-sleeps (r ~ 0.4 on real data), while the pattern drifts fast enough as the baby
-grows that all-time history badly under-predicts.
+The model is a recency-windowed least-squares fit of `gap ~ volume`, chosen
+because volume genuinely predicts how long the baby then sleeps (r ~ 0.2-0.4 on
+real data), while the pattern drifts fast enough as the baby grows that
+all-time history badly under-predicts.
+
+Day and night are modelled separately: daytime gaps run about 1.2h shorter than
+night gaps, so pooling them would over-predict every daytime feed. The period is
+chosen from the hour of the feed being asked about, not configured by the user.
 """
 
 import statistics
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Literal
 
 # Entries this far apart or closer belong to one feeding session. Wider than the
 # 20 min used elsewhere in the app: unmeasured breast top-ups follow a bottle by
@@ -33,6 +38,7 @@ MIN_VOLUME_SAMPLE = 5
 CANDIDATE_WINDOWS: tuple[int | None, ...] = (30, 60, None)
 
 Basis = str  # "regression" | "median_measured" | "median_unmeasured" | "insufficient_data"
+Period = Literal["day", "night"]
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,7 @@ class NightGap:
 @dataclass(frozen=True)
 class Prediction:
     basis: Basis
+    period: Period
     sample_size: int
     window_days: int | None
     predicted_at: datetime | None = None
@@ -102,11 +109,19 @@ def is_night(moment: datetime) -> bool:
     return moment.hour >= NIGHT_START_HOUR or moment.hour < NIGHT_END_HOUR
 
 
-def night_gaps(sessions: list[Session]) -> list[NightGap]:
-    """Gaps from the end of each night session to the start of the next session."""
+def period_of(moment: datetime) -> Period:
+    return "night" if is_night(moment) else "day"
+
+
+def session_gaps(sessions: list[Session], period: Period) -> list[NightGap]:
+    """Gaps from the end of each session in `period` to the start of the next.
+
+    The period is decided by when the gap *starts*, so a feed at 05:00 followed
+    by one at 09:00 counts as a night gap even though it ends in the morning.
+    """
     gaps: list[NightGap] = []
     for current, following in zip(sessions, sessions[1:], strict=False):
-        if not is_night(current.start):
+        if period_of(current.start) != period:
             continue
         hours = (following.start - current.end).total_seconds() / 3600
         if hours < 0 or hours > MAX_GAP_HOURS:
@@ -149,7 +164,7 @@ def _round_to_5min(moment: datetime) -> datetime:
 
 
 def _select_window(
-    history: list[FeedingRecord], ml: float | None, now: datetime
+    history: list[FeedingRecord], ml: float | None, now: datetime, period: Period
 ) -> tuple[int | None, list[NightGap]]:
     """Pick the narrowest window holding enough of the sample the estimate needs."""
     widest: tuple[int | None, list[NightGap]] = (None, [])
@@ -160,7 +175,7 @@ def _select_window(
             cutoff = now - timedelta(days=window)
             records = [r for r in history if r.occurred_at >= cutoff]
 
-        gaps = night_gaps(build_sessions(records))
+        gaps = session_gaps(build_sessions(records), period)
         widest = (window, gaps)
         relevant = [g for g in gaps if (g.from_ml > 0 if ml is not None else g.from_ml == 0)]
         if len(relevant) >= MIN_REGRESSION_SAMPLE:
@@ -229,17 +244,27 @@ def predict_next_feeding(
     history: list[FeedingRecord],
     now: datetime,
 ) -> Prediction:
-    """Predict when — and how much — the baby will feed after a feed at `at`."""
-    window_days, gaps = _select_window(history, ml, now)
+    """Predict when — and how much — the baby will feed after a feed at `at`.
+
+    Daytime and night feeds are answered from separate pools; `at` picks which.
+    """
+    period = period_of(at)
+    window_days, gaps = _select_window(history, ml, now, period)
 
     if len(gaps) < MIN_GAP_SAMPLE:
-        return Prediction(basis="insufficient_data", sample_size=len(gaps), window_days=window_days)
+        return Prediction(
+            basis="insufficient_data",
+            period=period,
+            sample_size=len(gaps),
+            window_days=window_days,
+        )
 
     hours, low_hours, high_hours, basis = _estimate_gap(gaps, ml)
     volume = _estimate_volume(gaps)
 
     return Prediction(
         basis=basis,
+        period=period,
         sample_size=len(gaps),
         window_days=window_days,
         predicted_at=_round_to_5min(at + timedelta(hours=hours)),

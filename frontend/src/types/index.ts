@@ -72,6 +72,8 @@ export type PredictionBasis =
   | 'median_unmeasured'
   | 'insufficient_data'
 
+export type PredictionPeriod = 'day' | 'night'
+
 export interface NextFeedingPrediction {
   predicted_at: string | null
   earliest_at: string | null
@@ -80,6 +82,7 @@ export interface NextFeedingPrediction {
   ml_low: number | null
   ml_high: number | null
   basis: PredictionBasis
+  period: PredictionPeriod
   sample_size: number
   window_days: number | null
 }

@@ -1,7 +1,7 @@
-# Night Feeding Predictor — Design Spec
+# Feeding Predictor — Design Spec
 
 **Date:** 2026-08-05
-**Feature:** A standalone night screen where the parent enters the last feeding (time + optional ml) and gets a predicted time and volume for the next feeding.
+**Feature:** A standalone screen where the parent enters the last feeding (time + optional ml) and gets a predicted time and volume for the next feeding. Day and night are modelled separately.
 
 ---
 
@@ -66,9 +66,13 @@ Merge consecutive feeding entries into sessions using a **45-minute** gap thresh
 
 Entries with a null value participate in sessionization and contribute 0 ml.
 
-### 3. Night filter
+### 3. Period filter
 
-A session is a night session when its `start` hour is in **`[21:00, 07:00)`** — i.e. `hour >= 21 or hour < 7`. Note this range wraps midnight.
+A session belongs to the **night** pool when its `start` hour is in **`[21:00, 07:00)`** — i.e. `hour >= 21 or hour < 7`, a range that wraps midnight — and to the **day** pool otherwise.
+
+Day and night are modelled from separate pools, because daytime gaps run about 1.2h shorter (median 2.53h vs 3.75h over the last 30 days). Pooling them would over-predict every daytime feed by roughly that margin.
+
+The pool is chosen from the hour of the feed being asked about, not configured by the user: entering a 14:00 feed answers from daytime gaps, a 01:15 feed from night gaps. The response reports which pool answered so the UI can label it.
 
 ### 4. Gaps
 
@@ -136,12 +140,13 @@ GET /api/predict/next-feeding?at=<ISO8601>&ml=<int>
   "ml_low": 100,
   "ml_high": 160,
   "basis": "regression",
+  "period": "night",
   "sample_size": 67,
   "window_days": 30
 }
 ```
 
-`basis` is one of `"regression"`, `"median_measured"`, `"median_unmeasured"`, `"insufficient_data"`.
+`basis` is one of `"regression"`, `"median_measured"`, `"median_unmeasured"`, `"insufficient_data"`. `period` is `"day"` or `"night"`, reporting which pool answered.
 
 When `basis` is `"insufficient_data"`, all of `predicted_at`, `earliest_at`, `latest_at`, `predicted_ml`, `ml_low`, `ml_high` are null. When volume data is too thin, only the three ml fields are null.
 
