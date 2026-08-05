@@ -4,6 +4,7 @@ import { BR } from './br/theme'
 const tabs = [
   { to: '/' as const, label: 'Upload', id: 'up' },
   { to: '/log' as const, label: 'Log', id: 'log' },
+  { to: '/night' as const, label: 'Night', id: 'night' },
   { to: '/review' as const, label: 'Review', id: 'rev' },
   { to: '/dashboard' as const, label: 'Dashboard', id: 'dash' },
 ]
@@ -41,6 +42,20 @@ function ReviewIcon({ active }: { active: boolean }) {
   )
 }
 
+function NightIcon({ active }: { active: boolean }) {
+  const c = active ? BR.amber : 'rgba(215,200,180,0.45)'
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+      <path
+        d="M15.5 13.8A6.2 6.2 0 0 1 8.2 6.5a6.2 6.2 0 1 0 7.3 7.3z"
+        stroke={c}
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function DashIcon({ active }: { active: boolean }) {
   const c = active ? BR.amber : 'rgba(215,200,180,0.45)'
   return (
@@ -58,6 +73,7 @@ function DashIcon({ active }: { active: boolean }) {
 const ICONS: Record<string, (p: { active: boolean }) => React.ReactElement> = {
   up: UploadIcon,
   log: LogIcon,
+  night: NightIcon,
   rev: ReviewIcon,
   dash: DashIcon,
 }
