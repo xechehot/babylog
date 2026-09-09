@@ -36,6 +36,14 @@ app = FastAPI(
     description="Baby log parser and dashboard",
     version="0.1.0",
     lifespan=lifespan,
+    # Tailscale Serve only routes /babylog/api/* to this app, so the docs and the schema
+    # have to live under /api to be reachable from the tailnet at all.
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url="/api/redoc",
+    # Paths in the schema are /api/..., so a client fetching the spec through
+    # https://host/babylog/api/openapi.json needs the /babylog prefix spelled out.
+    servers=[{"url": settings.public_base_url}] if settings.public_base_url else None,
 )
 
 app.add_middleware(
@@ -69,5 +77,6 @@ app.include_router(settings_router.router)
 
 
 @app.get("/health")
+@app.get("/api/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
