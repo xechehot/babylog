@@ -419,7 +419,7 @@ function EntryRow({ entry, onTap }: { entry: Entry; onTap: () => void }) {
               fontFamily: BR.serif,
               fontStyle: 'italic',
               fontSize: 13,
-              color: BR.dim,
+              color: entry.entry_type === 'food' ? BR.body : BR.dim,
               letterSpacing: 0.2,
             }}
           >
@@ -462,6 +462,7 @@ function formatLabelEn(entryType: string, subtype: string | null): string {
     if (subtype === 'vigantol') return 'PILLS · VIGANTOL'
     return 'PILLS'
   }
+  if (entryType === 'food') return 'FOOD · SOLIDS'
   return entryType.toUpperCase()
 }
 
@@ -593,20 +594,22 @@ function InlineEditForm({
           onChange={(e) => setEditTime(e.target.value)}
         />
       </div>
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        <input
-          type="number"
-          style={inputStyle}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          placeholder="Value"
-        />
+      <div className={`grid ${editType === 'food' ? 'grid-cols-1' : 'grid-cols-2'} gap-2 mt-2`}>
+        {editType !== 'food' && (
+          <input
+            type="number"
+            style={inputStyle}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            placeholder="Value"
+          />
+        )}
         <input
           type="text"
           style={inputStyle}
           value={editNotes}
           onChange={(e) => setEditNotes(e.target.value)}
-          placeholder="Notes"
+          placeholder={editType === 'food' ? 'Products, e.g. брокколи, яйцо' : 'Notes'}
         />
       </div>
       <div className="flex gap-2 mt-3">
@@ -618,7 +621,7 @@ function InlineEditForm({
               entry_type: editType,
               subtype: editSubtype || null,
               occurred_at: `${editDate} ${editTime}`,
-              value: editValue ? Number(editValue) : null,
+              value: editType === 'food' || !editValue ? null : Number(editValue),
               notes: editNotes || null,
             })
           }
@@ -769,20 +772,22 @@ function EntryForm({
           autoFocus
         />
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="number"
-          style={inputStyle}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Value"
-        />
+      <div className={`grid ${type === 'food' ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+        {type !== 'food' && (
+          <input
+            type="number"
+            style={inputStyle}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Value"
+          />
+        )}
         <input
           type="text"
           style={inputStyle}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notes"
+          placeholder={type === 'food' ? 'Products, e.g. брокколи, яйцо' : 'Notes'}
         />
       </div>
       <button
@@ -793,7 +798,7 @@ function EntryForm({
             entry_type: type,
             subtype: subtype || null,
             occurred_at: occurredAt,
-            value: value ? Number(value) : null,
+            value: type === 'food' || !value ? null : Number(value),
             notes: notes || null,
           })
         }

@@ -15,6 +15,8 @@ export const BR = {
   rose: '#ff9ea3',
   stool: '#b8946a',
   stoolGlow: 'rgba(184,148,106,0.5)',
+  leaf: '#9ad76a',
+  leafGlow: 'rgba(154,215,106,0.45)',
   mono: '"JetBrains Mono", ui-monospace, monospace',
   display: '"Unbounded", "JetBrains Mono", ui-monospace, monospace',
   serif: '"Cormorant Garamond", serif',
@@ -33,6 +35,7 @@ export const ENTRY_COLOR: Record<string, string> = {
   weight: BR.rose,
   pills: BR.cyan,
   vigantol: BR.cyan,
+  food: BR.leaf,
 }
 
 export function entryAccent(entryType: string, subtype?: string | null): string {
@@ -52,5 +55,6 @@ export function entryGlyph(entryType: string, subtype?: string | null): string {
   if (entryType === 'feeding') return 'F'
   if (entryType === 'diaper') return 'D'
   if (entryType === 'pills') return 'Rx'
+  if (entryType === 'food') return 'FD'
   return '·'
 }

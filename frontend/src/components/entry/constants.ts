@@ -5,6 +5,7 @@ export const TYPE_LABELS: Record<EntryType, string> = {
   diaper: 'Diaper',
   weight: 'Weight',
   pills: 'Pills',
+  food: 'Food',
 }
 
 export const SUBTYPE_LABELS: Record<string, string> = {
@@ -35,6 +36,7 @@ export function getEntryIcon(entryType: string, subtype: string | null): string 
   if (entryType === 'feeding') return '\u{1F37C}'
   if (entryType === 'diaper') return '\u{1FA7B}'
   if (entryType === 'pills') return '\u{1F48A}'
+  if (entryType === 'food') return '\u{1F963}'
   return ''
 }
 
