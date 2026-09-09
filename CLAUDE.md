@@ -50,6 +50,8 @@ Upload photo → `POST /api/uploads` → saved to disk, DB record created (statu
 - `feeding` with subtype `breast` | `formula` — value in ml
 - `diaper` with subtype `pee` | `poo` | `dry` | `pee+poo` — no value
 - `weight` — value in grams (displayed as kg in UI)
+- `pills` with subtype `vigantol` — no value
+- `food` (прикорм / solids) — no subtype, no value; the products given are free text in `notes`
 
 Entries also carry `confidence` (high/medium/low), `raw_text` from LLM parsing, and `confirmed` (bool, default false — toggled by user on Review page).
 
