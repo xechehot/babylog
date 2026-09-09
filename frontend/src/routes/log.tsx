@@ -16,6 +16,8 @@ import { BR, entryAccent } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { GlyphDot } from '../components/br/GlyphDot'
 
+const TYPE_FILTERS: (EntryType | 'all')[] = ['all', 'feeding', 'diaper', 'weight', 'pills', 'food']
+
 export const Route = createFileRoute('/log')({
   component: LogPage,
 })
@@ -23,6 +25,7 @@ export const Route = createFileRoute('/log')({
 function LogPage() {
   const queryClient = useQueryClient()
   const [rangeDays, setRangeDays] = useState(14)
+  const [typeFilter, setTypeFilter] = useState<EntryType | 'all'>('all')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const todayRef = useRef<HTMLDivElement>(null)
@@ -39,7 +42,9 @@ function LogPage() {
       ),
   })
 
-  const entries = entriesQuery.data?.entries ?? []
+  const allEntries = entriesQuery.data?.entries ?? []
+  const entries =
+    typeFilter === 'all' ? allEntries : allEntries.filter((e) => e.entry_type === typeFilter)
 
   const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
     const d = entry.date
@@ -112,38 +117,67 @@ function LogPage() {
 
       {/* search/filter row */}
       <div
-        className="mx-5 flex items-center gap-2.5"
+        className="mx-5"
         style={{
-          padding: '10px 12px',
           border: `1px solid ${BR.line}`,
           fontFamily: BR.mono,
           fontSize: 12,
           color: BR.dim,
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-          <circle cx="5" cy="5" r="4" stroke={BR.amber} strokeWidth="1" />
-          <path d="M8 8l3 3" stroke={BR.amber} strokeWidth="1" />
-        </svg>
-        <span style={{ color: BR.amber, letterSpacing: 2 }}>QUERY</span>
-        <span style={{ flex: 1, letterSpacing: 1 }}>› filter: all types</span>
-        <button
-          onClick={() => {
-            setSheetOpen(true)
-            setEditingId(null)
-          }}
-          className="uppercase"
-          style={{
-            color: BR.amber,
-            letterSpacing: 2,
-            borderLeft: `1px solid ${BR.line}`,
-            paddingLeft: 10,
-            fontFamily: BR.mono,
-            fontSize: 11,
-          }}
-        >
-          + NEW
-        </button>
+        <div className="flex items-center gap-2.5" style={{ padding: '10px 12px' }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+            <circle cx="5" cy="5" r="4" stroke={BR.amber} strokeWidth="1" />
+            <path d="M8 8l3 3" stroke={BR.amber} strokeWidth="1" />
+          </svg>
+          <span style={{ color: BR.amber, letterSpacing: 2 }}>QUERY</span>
+          <span style={{ flex: 1, letterSpacing: 1 }}>
+            › filter: {typeFilter === 'all' ? 'all types' : TYPE_LABELS[typeFilter].toLowerCase()}
+          </span>
+          <button
+            onClick={() => {
+              setSheetOpen(true)
+              setEditingId(null)
+            }}
+            className="uppercase"
+            style={{
+              color: BR.amber,
+              letterSpacing: 2,
+              borderLeft: `1px solid ${BR.line}`,
+              paddingLeft: 10,
+              fontFamily: BR.mono,
+              fontSize: 11,
+            }}
+          >
+            + NEW
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1.5" style={{ padding: '0 12px 10px' }}>
+          {TYPE_FILTERS.map((t) => {
+            const active = typeFilter === t
+            const accent = t === 'all' ? BR.amber : entryAccent(t)
+            return (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className="uppercase shrink-0"
+                style={{
+                  fontFamily: BR.mono,
+                  fontSize: 10,
+                  letterSpacing: 1.8,
+                  padding: '6px 10px',
+                  minHeight: 32,
+                  color: active ? accent : BR.dim,
+                  border: `1px solid ${active ? accent : BR.line}`,
+                  background: active ? `${accent}14` : 'transparent',
+                  textShadow: active ? `0 0 8px ${accent}66` : 'none',
+                }}
+              >
+                {t === 'all' ? 'ALL' : TYPE_LABELS[t].toUpperCase()}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Scrollable content */}
@@ -162,7 +196,9 @@ function LogPage() {
             className="text-center mt-8 uppercase"
             style={{ fontFamily: BR.mono, fontSize: 10, letterSpacing: 2, color: BR.dim }}
           >
-            No entries for this period
+            {typeFilter === 'all'
+              ? 'No entries for this period'
+              : `No ${TYPE_LABELS[typeFilter].toLowerCase()} entries for this period`}
           </p>
         )}
 
@@ -177,6 +213,7 @@ function LogPage() {
                 dateStr={date}
                 isToday={isToday}
                 totals={totals}
+                hideZeroTotals={typeFilter !== 'all'}
               />
               <div>
                 {[...dayEntries].reverse().map((entry) =>
@@ -210,7 +247,7 @@ function LogPage() {
           )
         })}
 
-        {!entriesQuery.isLoading && entries.length > 0 && (
+        {!entriesQuery.isLoading && allEntries.length > 0 && (
           <div className="px-5 py-4">
             <button
               className="w-full py-3 uppercase"
@@ -284,8 +321,14 @@ function computeTotals(entries: Entry[]) {
 
 const DayHeader = forwardRef<
   HTMLDivElement,
-  { dateStr: string; isToday: boolean; totals: { feedMl: number; pee: number; poo: number } }
->(({ dateStr, isToday, totals }, ref) => (
+  {
+    dateStr: string
+    isToday: boolean
+    totals: { feedMl: number; pee: number; poo: number }
+    /** A filtered view zeroes out the totals of the types it hides — don't print those. */
+    hideZeroTotals: boolean
+  }
+>(({ dateStr, isToday, totals, hideZeroTotals }, ref) => (
   <div
     ref={ref}
     className="relative"
@@ -349,15 +392,21 @@ const DayHeader = forwardRef<
           color: BR.dim,
         }}
       >
-        <span>
-          FEED · <span style={{ color: BR.amber }}>{totals.feedMl}ml</span>
-        </span>
-        <span>
-          WET · <span style={{ color: BR.cyan }}>{totals.pee}</span>
-        </span>
-        <span>
-          STL · <span style={{ color: BR.stool }}>{totals.poo}</span>
-        </span>
+        {(!hideZeroTotals || totals.feedMl > 0) && (
+          <span>
+            FEED · <span style={{ color: BR.amber }}>{totals.feedMl}ml</span>
+          </span>
+        )}
+        {(!hideZeroTotals || totals.pee > 0) && (
+          <span>
+            WET · <span style={{ color: BR.cyan }}>{totals.pee}</span>
+          </span>
+        )}
+        {(!hideZeroTotals || totals.poo > 0) && (
+          <span>
+            STL · <span style={{ color: BR.stool }}>{totals.poo}</span>
+          </span>
+        )}
       </div>
     )}
   </div>
