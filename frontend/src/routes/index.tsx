@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import type { Upload } from '../types'
 import { formatDateRu } from '../components/dashboard/utils'
 import { BR } from '../components/br/theme'
 import { PageHead } from '../components/br/PageHead'
 import { Rule } from '../components/br/Rule'
+import { CropOverlay } from '../components/upload/CropOverlay'
 
 export const Route = createFileRoute('/')({
   component: UploadPage,
@@ -40,6 +41,7 @@ function UploadPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingCrop, setPendingCrop] = useState<File | null>(null)
 
   const uploadsQuery = useQuery({
     queryKey: ['uploads'],
@@ -96,11 +98,27 @@ function UploadPage() {
     },
   })
 
+  // Selecting a photo opens the crop step; the upload only starts once it is confirmed.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      uploadMutation.mutate(file)
+      setPendingCrop(file)
     }
+  }
+
+  const clearFileInput = () => {
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleCropCancel = () => {
+    setPendingCrop(null)
+    clearFileInput()
+  }
+
+  const handleCropConfirm = (file: File) => {
+    setPendingCrop(null)
+    clearFileInput()
+    uploadMutation.mutate(file)
   }
 
   const uploads = uploadsQuery.data?.uploads ?? []
@@ -110,6 +128,10 @@ function UploadPage() {
 
   return (
     <>
+      {pendingCrop && (
+        <CropOverlay file={pendingCrop} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
+      )}
+
       <PageHead
         kicker="INGEST · HANDWRITING → STRUCT"
         title={
