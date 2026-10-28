@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     database_path: str = "~/.babylog/data/babylog.db"
     backend_port: int = 3849
     frontend_url: str = "http://localhost:5174/babylog"
+    # Where the API is reachable from the tailnet, e.g.
+    # https://<machine>.<tailnet>.ts.net/babylog. Only used to make the OpenAPI spec's
+    # server URL correct for clients that go through Tailscale Serve's /babylog prefix;
+    # empty means "same origin as the spec", which is right for direct localhost access.
+    public_base_url: str = ""
 
     @field_validator("upload_dir", "database_path", mode="after")
     @classmethod

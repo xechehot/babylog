@@ -28,6 +28,7 @@ const TYPE_LABELS: Record<EntryType, string> = {
   diaper: 'DIAPER',
   weight: 'WEIGHT',
   pills: 'PILLS',
+  food: 'FOOD',
 }
 
 const FEEDING_SUBTYPES = ['breast', 'formula'] as const
@@ -1061,6 +1062,7 @@ function formatLabel(entryType: string, subtype: string | null): string {
     if (subtype === 'vigantol') return 'VIGANTOL'
     return 'PILLS'
   }
+  if (entryType === 'food') return 'FOOD'
   return entryType.toUpperCase()
 }
 
@@ -1194,20 +1196,22 @@ function EntryCard({
             placeholder="YYYY-MM-DD HH:MM"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <input
-            type="number"
-            style={inputStyle}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            placeholder="value"
-          />
+        <div className={`grid ${editType === 'food' ? 'grid-cols-1' : 'grid-cols-2'} gap-2 mb-2`}>
+          {editType !== 'food' && (
+            <input
+              type="number"
+              style={inputStyle}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              placeholder="value"
+            />
+          )}
           <input
             type="text"
             style={inputStyle}
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
-            placeholder="notes"
+            placeholder={editType === 'food' ? 'products' : 'notes'}
           />
         </div>
         <div className="flex gap-2">
@@ -1218,7 +1222,7 @@ function EntryCard({
                 entry_type: editType,
                 subtype: editSubtype || null,
                 occurred_at: editTime,
-                value: editValue ? Number(editValue) : null,
+                value: editType === 'food' || !editValue ? null : Number(editValue),
                 notes: editNotes || null,
               })
             }
@@ -1336,7 +1340,7 @@ function EntryCard({
               fontFamily: BR.serif,
               fontStyle: 'italic',
               fontSize: 12,
-              color: BR.dim,
+              color: entry.entry_type === 'food' ? BR.body : BR.dim,
               marginTop: 1,
             }}
           >
@@ -1549,20 +1553,22 @@ function AddEntryForm({
           autoFocus
         />
       </div>
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <input
-          type="number"
-          style={inputStyle}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="value"
-        />
+      <div className={`grid ${type === 'food' ? 'grid-cols-1' : 'grid-cols-2'} gap-2 mb-2`}>
+        {type !== 'food' && (
+          <input
+            type="number"
+            style={inputStyle}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="value"
+          />
+        )}
         <input
           type="text"
           style={inputStyle}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="notes"
+          placeholder={type === 'food' ? 'products' : 'notes'}
         />
       </div>
       <div className="flex gap-2">
@@ -1573,7 +1579,7 @@ function AddEntryForm({
               entry_type: type,
               subtype: subtype || null,
               occurred_at: occurredAt,
-              value: value ? Number(value) : null,
+              value: type === 'food' || !value ? null : Number(value),
               notes: notes || null,
               upload_id: uploadId,
             })

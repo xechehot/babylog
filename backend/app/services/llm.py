@@ -32,7 +32,7 @@ weight measurements, and other care events. The logs are written in Russian with
 
 ### Event Types
 
-There are exactly 4 entry types: `feeding`, `diaper`, `weight`, `pills`. Each entry also has a `subtype` field.
+There are exactly 5 entry types: `feeding`, `diaper`, `weight`, `pills`, `food`. Each entry also has a `subtype` field.
 
 | entry_type | subtype    | Russian Patterns                                                          |
 |------------|------------|---------------------------------------------------------------------------|
@@ -44,6 +44,7 @@ There are exactly 4 entry types: `feeding`, `diaper`, `weight`, `pills`. Each en
 | diaper     | pee+poo    | "памперс моча кака", both pee and poo on one diaper line                  |
 | weight     | null       | "вес", "взвешивание", with value in кг or гр                              |
 | pills      | vigantol   | "вигантол", "витамин д", "витамин D", "vit. D", "вит. д"                  |
+| food       | null       | "еда", "прикорм", "каша", "пюре", followed by product names                |
 
 ### Feedings
 - Extract numeric values in milliliters (ml / мл).
@@ -79,6 +80,17 @@ There are exactly 4 entry types: `feeding`, `diaper`, `weight`, `pills`. Each en
 - If a pill/vitamin is mentioned but doesn't match any known subtype above, still use entry_type="pills"
   with subtype=null and put the raw name in `notes`.
 
+### Food (прикорм / solids)
+- Solid food given to the baby, written as the word "еда" / "прикорм" / "каша" / "пюре" followed by
+  a list of products: "еда брокколи яйцо персик", "прикорм кабачок".
+  → entry_type="food", subtype=null, value=null
+- Put the products in `notes` as a comma-separated lowercase list in Russian, without the leading
+  word "еда"/"прикорм": "еда брокколи яйцо персик" → notes="брокколи, яйцо, персик"
+- If an amount is written ("50 гр каши", "2 ложки пюре"), keep it inside the `notes` text and leave
+  value=null.
+- Do NOT confuse with `feeding`: `feeding` is milk or formula measured in ml; `food` is solids and
+  never carries a ml value.
+
 ### Multiple Events
 - If a single line contains multiple events (comma-separated or otherwise), create separate entries for each.
 
@@ -93,11 +105,11 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
 
 ```json
 {
-  "entry_type": "feeding | diaper | weight | pills",
+  "entry_type": "feeding | diaper | weight | pills | food",
   "subtype": "breast | formula | pee | poo | dry | pee+poo | vigantol | null",
   "occurred_at": "YYYY-MM-DD HH:MM",
   "value": null,
-  "notes": null,
+  "notes": "for food entries: the comma-separated product list; otherwise null",
   "raw_text": "original recognized Russian text for this entry",
   "confidence": "high | medium | low"
 }
@@ -159,6 +171,30 @@ def extract_json_array(raw_text: str) -> list:
     if best is None:
         raise ValueError(f"No JSON array found in LLM response: {text[:300]!r}")
     return best[0]
+
+
+VALID_ENTRY_TYPES = {"feeding", "diaper", "weight", "pills", "food"}
+
+
+def validate_entries(entries: list) -> list[dict]:
+    """Drop entries the model invented a type for and normalize the remaining fields."""
+    validated = []
+    for entry in entries:
+        if entry.get("entry_type") not in VALID_ENTRY_TYPES:
+            logger.warning("Skipping entry with unknown type: %s", entry.get("entry_type"))
+            continue
+        validated.append(
+            {
+                "entry_type": entry["entry_type"],
+                "subtype": entry.get("subtype"),
+                "occurred_at": entry["occurred_at"],
+                "value": entry.get("value"),
+                "notes": entry.get("notes"),
+                "raw_text": entry.get("raw_text"),
+                "confidence": entry.get("confidence", "medium"),
+            }
+        )
+    return validated
 
 
 class LLMService:
@@ -237,22 +273,4 @@ class LLMService:
             logger.error("Unparseable LLM response (%d chars): %s", len(raw_text), raw_text[:1000])
             raise
 
-        valid_types = {"feeding", "diaper", "weight", "pills"}
-        validated = []
-        for entry in entries:
-            if entry.get("entry_type") not in valid_types:
-                logger.warning("Skipping entry with unknown type: %s", entry.get("entry_type"))
-                continue
-            validated.append(
-                {
-                    "entry_type": entry["entry_type"],
-                    "subtype": entry.get("subtype"),
-                    "occurred_at": entry["occurred_at"],
-                    "value": entry.get("value"),
-                    "notes": entry.get("notes"),
-                    "raw_text": entry.get("raw_text"),
-                    "confidence": entry.get("confidence", "medium"),
-                }
-            )
-
-        return validated
+        return validate_entries(entries)

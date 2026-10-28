@@ -1,10 +1,11 @@
 """Tests for pulling the entries out of an LLM response."""
 
+import json
 from types import SimpleNamespace
 
 import pytest
 
-from app.services.llm import extract_json_array, extract_response_text
+from app.services.llm import extract_json_array, extract_response_text, validate_entries
 
 
 def text_block(text: str) -> SimpleNamespace:
@@ -122,3 +123,36 @@ def test_response_text_joins_multiple_text_blocks():
 def test_response_without_text_blocks_raises():
     with pytest.raises(ValueError):
         extract_response_text([thinking_block()])
+
+
+def test_validate_keeps_food_entry():
+    """Solids ("прикорм") come back as a food entry with the products in notes."""
+    entries = validate_entries(
+        [
+            {
+                "entry_type": "food",
+                "subtype": None,
+                "occurred_at": "2026-08-01 13:00",
+                "value": None,
+                "notes": "брокколи, яйцо, персик",
+                "raw_text": "13:00 еда брокколи яйцо персик",
+                "confidence": "high",
+            }
+        ]
+    )
+    assert len(entries) == 1
+    assert entries[0]["entry_type"] == "food"
+    assert entries[0]["notes"] == "брокколи, яйцо, персик"
+    assert entries[0]["value"] is None
+
+
+def test_validate_drops_unknown_entry_type():
+    entries = validate_entries(
+        [{"entry_type": "sleep", "occurred_at": "2026-08-01 13:00"}, *json.loads(ENTRIES_JSON)]
+    )
+    assert [e["entry_type"] for e in entries] == ["feeding", "diaper"]
+
+
+def test_validate_defaults_confidence_to_medium():
+    entries = validate_entries([{"entry_type": "food", "occurred_at": "2026-08-01 13:00"}])
+    assert entries[0]["confidence"] == "medium"

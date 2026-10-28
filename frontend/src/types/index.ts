@@ -1,4 +1,4 @@
-export type EntryType = 'feeding' | 'diaper' | 'weight' | 'pills'
+export type EntryType = 'feeding' | 'diaper' | 'weight' | 'pills' | 'food'
 export type FeedingSubtype = 'breast' | 'formula'
 export type DiaperSubtype = 'pee' | 'poo' | 'dry' | 'pee+poo'
 export type PillsSubtype = 'vigantol'

@@ -42,6 +42,38 @@ async def test_create_weight_entry(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_create_food_entry(client: AsyncClient):
+    """Solids are logged as free text in notes: no subtype, no value."""
+    entry = await seed_entry(
+        client,
+        entry_type="food",
+        subtype=None,
+        occurred_at="2026-03-10T13:00:00",
+        value=None,
+        notes="брокколи, яйцо, персик",
+    )
+    assert entry["entry_type"] == "food"
+    assert entry["subtype"] is None
+    assert entry["value"] is None
+    assert entry["notes"] == "брокколи, яйцо, персик"
+
+
+@pytest.mark.asyncio
+async def test_update_food_entry_notes(client: AsyncClient):
+    entry = await seed_entry(
+        client,
+        entry_type="food",
+        subtype=None,
+        occurred_at="2026-03-10T13:00:00",
+        value=None,
+        notes="брокколи",
+    )
+    resp = await client.patch(f"/api/entries/{entry['id']}", json={"notes": "брокколи, яйцо"})
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "брокколи, яйцо"
+
+
+@pytest.mark.asyncio
 async def test_list_entries_default_range(client: AsyncClient):
     await seed_entry(client, occurred_at="2026-03-10T08:00:00")
     await seed_entry(client, occurred_at="2026-03-10T09:00:00")

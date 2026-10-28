@@ -70,3 +70,39 @@ FRONTEND_URL=http://localhost:5174/babylog,https://<your-machine>.tailb94fe6.ts.
 ```
 
 Then open `https://<your-machine>.tailb94fe6.ts.net/babylog/`
+
+## API access (scripts and agents)
+
+The backend is a FastAPI app, so the OpenAPI schema is generated from the code and always
+current. Both it and the interactive docs are served under `/api`, which is the only prefix
+Tailscale Serve forwards to the backend:
+
+| What | URL |
+|------|-----|
+| OpenAPI schema | `https://<machine>.<tailnet>.ts.net/babylog/api/openapi.json` |
+| Swagger UI | `https://<machine>.<tailnet>.ts.net/babylog/api/docs` |
+| ReDoc | `https://<machine>.<tailnet>.ts.net/babylog/api/redoc` |
+| Health check | `https://<machine>.<tailnet>.ts.net/babylog/api/health` |
+
+Set `PUBLIC_BASE_URL` in `backend/.env` to that `.../babylog` prefix so the schema advertises
+the right base URL — otherwise a client that reads the schema will resolve `/api/entries`
+against the bare host and miss the `/babylog` prefix.
+
+Endpoints an agent is likely to want (all read-only GETs):
+
+```bash
+# raw entries; type is one of feeding | diaper | weight | pills | food
+curl "$BASE/api/entries?from_date=2026-09-01&to_date=2026-09-09&type=food"
+
+# per-day aggregates: feeding ml and counts, diaper counts, latest weight
+curl "$BASE/api/dashboard?from_date=2026-09-01&to_date=2026-09-09"
+
+# uploaded photos and their parsing status
+curl "$BASE/api/uploads"
+```
+
+`from_date` / `to_date` are `YYYY-MM-DD` and default to the last 7 days.
+
+There is no authentication: anything that can reach the tailnet address can also POST, PATCH
+and DELETE entries. Keep the service inside the tailnet, and use Tailscale ACLs if the agent
+should only reach it from specific devices.
