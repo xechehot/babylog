@@ -142,6 +142,9 @@ input[type='search'] {
 
 /* react-image-crop, restyled for the Blade Runner console look */
 .br-crop {
+  /* The selection dims everything outside itself with a huge box-shadow spread.
+     Clip it to the image area so it cannot wash over the header and buttons. */
+  overflow: hidden;
   --rc-drag-handle-size: 16px;
   --rc-drag-handle-mobile-size: 28px;
   --rc-drag-handle-bg-colour: rgba(255, 179, 71, 0.18);

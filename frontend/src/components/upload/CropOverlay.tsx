@@ -72,6 +72,8 @@ export function CropOverlay({ file, onCancel, onConfirm }: CropOverlayProps) {
     setCrop(FULL_FRAME)
   }
 
+  const uploadDisabled = !source || working
+
   const handleConfirm = async () => {
     if (!source || working) return
     setWorking(true)
@@ -179,22 +181,25 @@ export function CropOverlay({ file, onCancel, onConfirm }: CropOverlayProps) {
             color: BR.cyan,
             border: `1px solid ${BR.cyan}`,
             textShadow: `0 0 6px ${BR.cyanGlow}`,
+            opacity: !previewUrl || working ? 0.4 : 1,
           }}
         >
           ROTATE ⟳
         </button>
         <button
           onClick={handleConfirm}
-          disabled={!source || working}
+          disabled={uploadDisabled}
           className="uppercase py-3"
           style={{
             fontFamily: BR.mono,
-            fontSize: 10,
+            fontSize: 11,
+            fontWeight: 600,
             letterSpacing: 2,
-            color: BR.amber,
-            border: `1px solid ${BR.amber}`,
-            textShadow: `0 0 8px ${BR.amberGlow}`,
-            opacity: !source || working ? 0.5 : 1,
+            // Filled, so it reads as the primary action next to the outlined ones.
+            color: uploadDisabled ? BR.dim : BR.ink,
+            background: uploadDisabled ? 'transparent' : BR.amber,
+            border: `1px solid ${uploadDisabled ? BR.line : BR.amber}`,
+            boxShadow: uploadDisabled ? 'none' : `0 0 18px ${BR.amberGlow}`,
           }}
         >
           {working ? 'PROCESSING…' : 'UPLOAD'}
