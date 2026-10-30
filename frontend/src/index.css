@@ -139,3 +139,34 @@ input[type='search'] {
 .br-glow-amber {
   text-shadow: 0 0 10px var(--color-amber-glow);
 }
+
+/* react-image-crop, restyled for the Blade Runner console look */
+.br-crop {
+  /* The selection dims everything outside itself with a huge box-shadow spread.
+     Clip it to the image area so it cannot wash over the header and buttons. */
+  overflow: hidden;
+  --rc-drag-handle-size: 16px;
+  --rc-drag-handle-mobile-size: 28px;
+  --rc-drag-handle-bg-colour: rgba(255, 179, 71, 0.18);
+  --rc-border-color: var(--color-amber);
+  --rc-focus-color: var(--color-cyan-br);
+}
+
+.br-crop .ReactCrop__crop-selection {
+  box-shadow:
+    0 0 14px var(--color-amber-glow),
+    0 0 0 9999em rgba(6, 8, 10, 0.7);
+}
+
+/* Amber marching ants instead of the default white-on-grey. */
+.br-crop .ReactCrop__crop-selection:not(.ReactCrop--no-animate .ReactCrop__crop-selection) {
+  background-image:
+    linear-gradient(90deg, var(--color-amber) 50%, transparent 50%),
+    linear-gradient(90deg, var(--color-amber) 50%, transparent 50%),
+    linear-gradient(var(--color-amber) 50%, transparent 50%),
+    linear-gradient(var(--color-amber) 50%, transparent 50%);
+}
+
+.br-crop .ReactCrop__drag-handle {
+  box-shadow: 0 0 8px var(--color-amber-glow);
+}
