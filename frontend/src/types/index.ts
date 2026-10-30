@@ -66,6 +66,27 @@ export interface AllTimeTotals {
   feeding_formula: number
 }
 
+export type PredictionBasis =
+  | 'regression'
+  | 'median_measured'
+  | 'median_unmeasured'
+  | 'insufficient_data'
+
+export type PredictionPeriod = 'day' | 'night'
+
+export interface NextFeedingPrediction {
+  predicted_at: string | null
+  earliest_at: string | null
+  latest_at: string | null
+  predicted_ml: number | null
+  ml_low: number | null
+  ml_high: number | null
+  basis: PredictionBasis
+  period: PredictionPeriod
+  sample_size: number
+  window_days: number | null
+}
+
 export interface DashboardResponse {
   from_date: string
   to_date: string
