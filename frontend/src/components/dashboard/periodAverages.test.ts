@@ -22,6 +22,8 @@ function makeEntry(
     confidence: null,
     raw_text: null,
     confirmed: false,
+    allergens: null,
+    food_groups: null,
     created_at: overrides.occurred_at,
     updated_at: overrides.occurred_at,
   }
@@ -133,6 +135,8 @@ describe('computePeriodAverages', () => {
       diaper_pee_count: overrides.diaper_pee_count ?? 0,
       diaper_poo_count: overrides.diaper_poo_count ?? 0,
       diaper_dry_count: overrides.diaper_dry_count ?? 0,
+      food_count: overrides.food_count ?? 0,
+      pills_count: overrides.pills_count ?? 0,
       diaper_pee_poo_count: overrides.diaper_pee_poo_count ?? 0,
     }
   }

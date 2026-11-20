@@ -28,6 +28,13 @@ import {
   computeDailyBreastCount,
 } from '../components/dashboard/dailyAggregates'
 import { getDateRange, getTodayStr, formatDateRu } from '../components/dashboard/utils'
+import { AllergenPanel } from '../components/dashboard/AllergenPanel'
+import { FoodGroupGrid } from '../components/dashboard/FoodGroupGrid'
+import {
+  computeAllergenStats,
+  computeFoodGroupDays,
+  computePillsBreakdown,
+} from '../components/dashboard/foodAggregates'
 import { PeriodAverages } from '../components/dashboard/PeriodAverages.tsx'
 import { MissingDaysBanner } from '../components/dashboard/MissingDaysBanner'
 import {
@@ -96,6 +103,29 @@ function DashboardPage() {
     queryFn: () => api.get<{ entries: Entry[] }>('/api/entries?type=weight&from_date=2000-01-01'), // sentinel: fetch all-time
   })
 
+  const { data: foodData } = useQuery({
+    queryKey: ['entries', { type: 'food', from_date, to_date }],
+    queryFn: () =>
+      api.get<{ entries: Entry[] }>(
+        `/api/entries?type=food&from_date=${from_date}&to_date=${to_date}`,
+      ),
+  })
+
+  // Allergen recency is an all-time question ("when did he last get fish?"), so this one
+  // ignores the selected range. Solids are a handful of entries a day, so it stays cheap.
+  const { data: allFoodData } = useQuery({
+    queryKey: ['entries', { type: 'food', all: true }],
+    queryFn: () => api.get<{ entries: Entry[] }>('/api/entries?type=food&from_date=2000-01-01'),
+  })
+
+  const { data: pillsData } = useQuery({
+    queryKey: ['entries', { type: 'pills', from_date, to_date }],
+    queryFn: () =>
+      api.get<{ entries: Entry[] }>(
+        `/api/entries?type=pills&from_date=${from_date}&to_date=${to_date}`,
+      ),
+  })
+
   const days = data?.days ?? []
   const yesterdayStr = getRelativeDateStr(-1)
   const dayBeforeStr = getRelativeDateStr(-2)
@@ -105,6 +135,23 @@ function DashboardPage() {
   const yesterdayDiapers = (diaperData?.entries ?? []).filter(
     (e) => e.date === yesterdayStr && e.subtype !== 'dry',
   )
+
+  const foodDays = days
+    .filter((d) => d.food_count > 0)
+    .map((d) => ({ date: d.date, value: d.food_count }))
+  const pillsDays = days
+    .filter((d) => d.pills_count > 0)
+    .map((d) => ({ date: d.date, value: d.pills_count }))
+  const allergenSummary = computeAllergenStats(allFoodData?.entries ?? [], {
+    from: from_date,
+    to: to_date,
+    today: getTodayStr(),
+  })
+  const foodGroupDays = computeFoodGroupDays(foodData?.entries ?? [], {
+    from: from_date,
+    to: to_date,
+  })
+  const pillsBreakdown = computePillsBreakdown(pillsData?.entries ?? [])
 
   const entriesReady = feedingData !== undefined && diaperData !== undefined
   const allFeedings = feedingData?.entries ?? []
@@ -233,6 +280,62 @@ function DashboardPage() {
               )}
               <ChartArea>
                 <BreastGapChart entries={feedingData.entries} />
+              </ChartArea>
+            </>
+          )}
+
+          {foodDays.length > 0 && (
+            <>
+              <Rule label="SOLIDS · ПРИКОРМ" accent={BR.leaf} />
+              <SubKicker label="meals · per day" accent={BR.leaf} />
+              <ChartArea>
+                <DailyAvgBarChart
+                  data={foodDays}
+                  color={BR.leaf}
+                  formatValue={(v) => Math.round(v).toString()}
+                />
+              </ChartArea>
+
+              <SubKicker label="food groups · meals covering each" accent={BR.leaf} />
+              <ChartArea>
+                <FoodGroupGrid days={foodGroupDays} />
+              </ChartArea>
+            </>
+          )}
+
+          {allFoodData && allFoodData.entries.length > 0 && (
+            <>
+              <Rule label="ALLERGENS · 8 TRACKED" accent={BR.blood} />
+              <SubKicker label="stalest first · recency is all-time" accent={BR.blood} />
+              <ChartArea>
+                <AllergenPanel summary={allergenSummary} />
+              </ChartArea>
+            </>
+          )}
+
+          {pillsDays.length > 0 && (
+            <>
+              <Rule label="MEDS · ЛЕКАРСТВА" accent={BR.cyan} />
+              <SubKicker label="doses · per day" accent={BR.cyan} />
+              <ChartArea>
+                <DailyAvgBarChart
+                  data={pillsDays}
+                  color={BR.cyan}
+                  formatValue={(v) => Math.round(v).toString()}
+                />
+                {pillsBreakdown.length > 0 && (
+                  <div
+                    className="mt-2 uppercase"
+                    style={{
+                      fontFamily: BR.mono,
+                      fontSize: 9,
+                      letterSpacing: 1.5,
+                      color: BR.dim,
+                    }}
+                  >
+                    {pillsBreakdown.map((row) => `${row.label} ${row.count}×`).join(' · ')}
+                  </div>
+                )}
               </ChartArea>
             </>
           )}
@@ -684,6 +787,24 @@ function YesterdaySummary({
           unit="h"
           accent={BR.cyan}
           note="wet+soil"
+        />
+      )}
+      {yesterday.food_count > 0 && (
+        <ReadoutTile
+          label="SOLIDS"
+          value={yesterday.food_count}
+          unit="×"
+          accent={BR.leaf}
+          note="прикорм"
+        />
+      )}
+      {yesterday.pills_count > 0 && (
+        <ReadoutTile
+          label="MEDS"
+          value={yesterday.pills_count}
+          unit="×"
+          accent={BR.cyan}
+          note="лекарства"
         />
       )}
     </div>

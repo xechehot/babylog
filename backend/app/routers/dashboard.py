@@ -30,7 +30,9 @@ async def get_dashboard(
                 SUM(CASE WHEN entry_type='diaper' AND subtype='pee' THEN 1 ELSE 0 END) as diaper_pee_count,
                 SUM(CASE WHEN entry_type='diaper' AND subtype='poo' THEN 1 ELSE 0 END) as diaper_poo_count,
                 SUM(CASE WHEN entry_type='diaper' AND subtype='dry' THEN 1 ELSE 0 END) as diaper_dry_count,
-                SUM(CASE WHEN entry_type='diaper' AND subtype='pee+poo' THEN 1 ELSE 0 END) as diaper_pee_poo_count
+                SUM(CASE WHEN entry_type='diaper' AND subtype='pee+poo' THEN 1 ELSE 0 END) as diaper_pee_poo_count,
+                SUM(CASE WHEN entry_type='food' THEN 1 ELSE 0 END) as food_count,
+                SUM(CASE WHEN entry_type='pills' THEN 1 ELSE 0 END) as pills_count
             FROM entries
             WHERE date >= ? AND date <= ?
             GROUP BY date
@@ -82,6 +84,8 @@ async def get_dashboard(
             diaper_poo_count=row["diaper_poo_count"],
             diaper_dry_count=row["diaper_dry_count"],
             diaper_pee_poo_count=row["diaper_pee_poo_count"],
+            food_count=row["food_count"],
+            pills_count=row["pills_count"],
         )
         for row in day_rows
     ]

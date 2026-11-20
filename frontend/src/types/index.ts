@@ -30,6 +30,12 @@ export interface Entry {
   confidence: Confidence | null
   raw_text: string | null
   confirmed: boolean
+  /**
+   * Allergen / food-group tags, set by the LLM on `food` entries only.
+   * null = never tagged (recognized before tagging existed); [] = tagged, nothing found.
+   */
+  allergens: string[] | null
+  food_groups: string[] | null
   created_at: string
   updated_at: string
 }
@@ -56,6 +62,8 @@ export interface DashboardDay {
   diaper_poo_count: number
   diaper_dry_count: number
   diaper_pee_poo_count: number
+  food_count: number
+  pills_count: number
 }
 
 export interface AllTimeTotals {

@@ -69,7 +69,7 @@ export const MONTH_SHORT: Record<number, string> = {
   11: 'Dec',
 }
 
-function formatISO(d: Date): string {
+export function formatISO(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')

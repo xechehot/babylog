@@ -10,6 +10,9 @@ class EntryCreate(BaseModel):
     confidence: str | None = None
     raw_text: str | None = None
     upload_id: int | None = None
+    # Tags for `food` entries; see app.food_tags for the closed vocabularies.
+    allergens: list[str] | None = None
+    food_groups: list[str] | None = None
 
 
 class EntryUpdate(BaseModel):
@@ -19,6 +22,8 @@ class EntryUpdate(BaseModel):
     value: float | None = None
     notes: str | None = None
     confirmed: bool | None = None
+    allergens: list[str] | None = None
+    food_groups: list[str] | None = None
 
 
 class EntryResponse(BaseModel):
@@ -33,6 +38,8 @@ class EntryResponse(BaseModel):
     confidence: str | None = None
     raw_text: str | None = None
     confirmed: bool = False
+    allergens: list[str] | None = None
+    food_groups: list[str] | None = None
     created_at: str
     updated_at: str
 

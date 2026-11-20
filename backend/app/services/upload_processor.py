@@ -1,3 +1,4 @@
+import json
 import logging
 import mimetypes
 import time
@@ -58,10 +59,13 @@ async def process_upload(upload_id: int) -> None:
         async with get_db() as db:
             for entry in entries:
                 date = entry["occurred_at"][:10]
+                allergens = entry.get("allergens")
+                food_groups = entry.get("food_groups")
                 await db.execute(
                     """INSERT INTO entries
-                       (upload_id, entry_type, subtype, occurred_at, date, value, notes, confidence, raw_text)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       (upload_id, entry_type, subtype, occurred_at, date, value, notes,
+                        confidence, raw_text, allergens, food_groups)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         upload_id,
                         entry["entry_type"],
@@ -72,6 +76,8 @@ async def process_upload(upload_id: int) -> None:
                         entry.get("notes"),
                         entry.get("confidence"),
                         entry.get("raw_text"),
+                        None if allergens is None else json.dumps(allergens),
+                        None if food_groups is None else json.dumps(food_groups),
                     ),
                 )
 

@@ -7,10 +7,11 @@ import anthropic
 from anthropic.types import OutputConfigParam
 
 from app.config import settings
+from app.food_tags import ALLERGENS, FOOD_GROUPS, FOOD_TAG_REFERENCE, normalize_tags
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_TEMPLATE = """\
 You are a specialist in recognizing handwritten text from baby care logs written in Russian.
 Your task is to parse a photographed handwritten log and return structured JSON.
 
@@ -91,6 +92,24 @@ There are exactly 5 entry types: `feeding`, `diaper`, `weight`, `pills`, `food`.
 - Do NOT confuse with `feeding`: `feeding` is milk or formula measured in ml; `food` is solids and
   never carries a ml value.
 
+### Food tagging — `allergens` and `food_groups`
+Every `food` entry MUST also carry two arrays derived from the products you recognized:
+`allergens` and `food_groups`. Use an empty array `[]` when nothing applies. Both fields are
+null for every other entry type.
+
+__FOOD_TAG_REFERENCE__
+Tagging examples:
+- "еда: говядина, лук, гречка"
+  → allergens: [], food_groups: ["protein","fat","carbs","fiber","produce"]
+- "еда: мамина, голубика"
+  → allergens: [], food_groups: ["fiber","produce"]
+- "еда: моцарелла, голубика, малина"
+  → allergens: ["milk"], food_groups: ["protein","fat","fiber","produce"]
+- "еда: хлеб, арахис, мандарин"
+  → allergens: ["peanut","gluten"], food_groups: ["protein","fat","carbs","fiber","produce"]
+- "еда: мидии, креветки, апельсин, брокколи"
+  → allergens: ["shellfish"], food_groups: ["protein","fat","fiber","produce"]
+
 ### Multiple Events
 - If a single line contains multiple events (comma-separated or otherwise), create separate entries for each.
 
@@ -110,6 +129,8 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
   "occurred_at": "YYYY-MM-DD HH:MM",
   "value": null,
   "notes": "for food entries: the comma-separated product list; otherwise null",
+  "allergens": ["food entries: keys from the allergen list, [] if none; null for other types"],
+  "food_groups": ["food entries: keys from the food group list, [] if none; null for other types"],
   "raw_text": "original recognized Russian text for this entry",
   "confidence": "high | medium | low"
 }
@@ -122,6 +143,34 @@ Return ONLY a JSON array (no wrapping object, no markdown fences). Each element:
 - When in doubt, include the raw recognized text in raw_text and set confidence to "low".
 - Return ONLY the JSON array. No explanation, no markdown fences, no wrapper object.
 """
+
+SYSTEM_PROMPT = _SYSTEM_PROMPT_TEMPLATE.replace("__FOOD_TAG_REFERENCE__", FOOD_TAG_REFERENCE)
+
+
+FOOD_TAGGING_SYSTEM_PROMPT = (
+    """\
+You classify lists of foods given to a baby during solid-food introduction (прикорм).
+Each input line is a comma-separated list of products in Russian, already transcribed from a
+handwritten log. For each line, return the allergens it contains and the food groups it covers.
+
+"""
+    + FOOD_TAG_REFERENCE
+    + """
+## Output format
+Return ONLY a JSON array with one object per input line, in input order:
+
+```json
+[
+  {"index": 1, "allergens": ["milk"], "food_groups": ["protein","fat","fiber","produce"]}
+]
+```
+
+- `index` is the number shown next to the line in the input.
+- Use `[]` for a line with no allergens / no food groups (e.g. water or breast milk only).
+- Emit an object for EVERY input line, even unreadable ones (use empty arrays).
+- Return ONLY the JSON array. No explanation, no markdown fences, no wrapper object.
+"""
+)
 
 
 def extract_response_text(content: list) -> str:
@@ -192,6 +241,17 @@ def validate_entries(entries: list) -> list[dict]:
                 "notes": entry.get("notes"),
                 "raw_text": entry.get("raw_text"),
                 "confidence": entry.get("confidence", "medium"),
+                # Tags only make sense for solids; drop whatever the model attached elsewhere.
+                "allergens": (
+                    normalize_tags(entry.get("allergens"), ALLERGENS)
+                    if entry["entry_type"] == "food"
+                    else None
+                ),
+                "food_groups": (
+                    normalize_tags(entry.get("food_groups"), FOOD_GROUPS)
+                    if entry["entry_type"] == "food"
+                    else None
+                ),
             }
         )
     return validated
@@ -274,3 +334,55 @@ class LLMService:
             raise
 
         return validate_entries(entries)
+
+    async def tag_food_notes(self, notes: list[str]) -> list[dict]:
+        """Tag already-transcribed food product lists with allergens and food groups.
+
+        Text-only counterpart to the tagging the vision prompt does at parse time, used to
+        backfill `food` entries that were recognized before tagging existed. Returns one dict
+        per input note, in input order; a note the model skipped comes back with empty lists.
+        """
+        if not notes:
+            return []
+
+        numbered = "\n".join(f"{i + 1}. {note}" for i, note in enumerate(notes))
+        response = await self.client.messages.create(
+            model=self.model,
+            max_tokens=8000,
+            output_config=OutputConfigParam(effort="low"),
+            system=FOOD_TAGGING_SYSTEM_PROMPT,
+            messages=[
+                {"role": "user", "content": f"Classify these {len(notes)} lines:\n{numbered}"}
+            ],
+        )
+
+        if response.stop_reason == "refusal":
+            raise ValueError(f"LLM refused the tagging request: {response.stop_details}")
+        raw_text = extract_response_text(response.content)
+        if response.stop_reason == "max_tokens":
+            raise ValueError(f"Tagging response truncated after {len(raw_text)} chars")
+
+        by_index = {}
+        for item in extract_json_array(raw_text):
+            if not isinstance(item, dict):
+                continue
+            raw_index = item.get("index")
+            if not isinstance(raw_index, int | str):
+                continue
+            try:
+                index = int(raw_index)
+            except ValueError:
+                continue
+            by_index[index] = item
+
+        results = []
+        for i in range(len(notes)):
+            item = by_index.get(i + 1, {})
+            results.append(
+                {
+                    "allergens": normalize_tags(item.get("allergens"), ALLERGENS) or [],
+                    "food_groups": normalize_tags(item.get("food_groups"), FOOD_GROUPS) or [],
+                    "tagged": (i + 1) in by_index,
+                }
+            )
+        return results
