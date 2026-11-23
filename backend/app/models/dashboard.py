@@ -11,6 +11,8 @@ class DashboardDay(BaseModel):
     diaper_poo_count: int
     diaper_dry_count: int
     diaper_pee_poo_count: int
+    food_count: int
+    pills_count: int
 
 
 class AllTimeTotals(BaseModel):

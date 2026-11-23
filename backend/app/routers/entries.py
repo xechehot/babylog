@@ -1,11 +1,30 @@
+import json
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
 from app.database import get_db
+from app.food_tags import ALLERGENS, FOOD_GROUPS, normalize_tags
 from app.models.entry import EntryCreate, EntryListResponse, EntryResponse, EntryUpdate
 
 router = APIRouter(prefix="/api/entries", tags=["entries"])
+
+
+def _load_tags(raw: str | None) -> list[str] | None:
+    """Decode a stored tag array. Rows written before tagging existed hold NULL."""
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return value if isinstance(value, list) else None
+
+
+def _dump_tags(values: list[str] | None, allowed: tuple[str, ...]) -> str | None:
+    """Encode a tag array for storage, dropping anything outside the closed vocabulary."""
+    normalized = normalize_tags(values, allowed)
+    return None if normalized is None else json.dumps(normalized)
 
 
 def _row_to_response(row) -> EntryResponse:
@@ -21,6 +40,8 @@ def _row_to_response(row) -> EntryResponse:
         confidence=row["confidence"],
         raw_text=row["raw_text"],
         confirmed=bool(row["confirmed"]),
+        allergens=_load_tags(row["allergens"]),
+        food_groups=_load_tags(row["food_groups"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -61,8 +82,8 @@ async def create_entry(entry: EntryCreate) -> EntryResponse:
     async with get_db() as db:
         cursor = await db.execute(
             """INSERT INTO entries (entry_type, subtype, occurred_at, date,
-               value, notes, confidence, raw_text, upload_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               value, notes, confidence, raw_text, upload_id, allergens, food_groups)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 entry.entry_type,
                 entry.subtype,
@@ -73,6 +94,8 @@ async def create_entry(entry: EntryCreate) -> EntryResponse:
                 entry.confidence,
                 entry.raw_text,
                 entry.upload_id,
+                _dump_tags(entry.allergens, ALLERGENS),
+                _dump_tags(entry.food_groups, FOOD_GROUPS),
             ),
         )
         await db.commit()
@@ -92,7 +115,7 @@ async def update_entry(entry_id: int, entry: EntryUpdate) -> EntryResponse:
         if not existing:
             raise HTTPException(status_code=404, detail="Entry not found")
 
-        updates: dict[str, str | float | int] = {}
+        updates: dict[str, str | float | int | None] = {}
         if entry.entry_type is not None:
             updates["entry_type"] = entry.entry_type
         if entry.subtype is not None:
@@ -106,6 +129,10 @@ async def update_entry(entry_id: int, entry: EntryUpdate) -> EntryResponse:
             updates["notes"] = entry.notes
         if entry.confirmed is not None:
             updates["confirmed"] = int(entry.confirmed)
+        if entry.allergens is not None:
+            updates["allergens"] = _dump_tags(entry.allergens, ALLERGENS) or "[]"
+        if entry.food_groups is not None:
+            updates["food_groups"] = _dump_tags(entry.food_groups, FOOD_GROUPS) or "[]"
 
         if updates:
             set_clause = ", ".join(f"{k}=?" for k in updates)

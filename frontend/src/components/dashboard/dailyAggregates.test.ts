@@ -20,6 +20,8 @@ function makeEntry(overrides: Partial<Entry> & { occurred_at: string; entry_type
     confidence: null,
     raw_text: null,
     confirmed: false,
+    allergens: null,
+    food_groups: null,
     created_at: overrides.occurred_at,
     updated_at: overrides.occurred_at,
   }

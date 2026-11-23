@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS entries (
     notes           TEXT,
     confidence      TEXT,
     raw_text        TEXT,
+    allergens       TEXT,
+    food_groups     TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     confirmed       INTEGER NOT NULL DEFAULT 0
@@ -56,6 +58,13 @@ async def _migrate(db: aiosqlite.Connection) -> None:
     columns = {row[1] for row in await cursor.fetchall()}
     if "confirmed" not in columns:
         await db.execute("ALTER TABLE entries ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0")
+        await db.commit()
+    # JSON arrays of allergen / food-group tags, set by the LLM on `food` entries only.
+    if "allergens" not in columns:
+        await db.execute("ALTER TABLE entries ADD COLUMN allergens TEXT")
+        await db.commit()
+    if "food_groups" not in columns:
+        await db.execute("ALTER TABLE entries ADD COLUMN food_groups TEXT")
         await db.commit()
 
     cursor = await db.execute("PRAGMA table_info(uploads)")

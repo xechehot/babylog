@@ -15,6 +15,8 @@ function makeFeeding(occurred_at: string, value: number): Entry {
     confidence: null,
     raw_text: null,
     confirmed: false,
+    allergens: null,
+    food_groups: null,
     created_at: occurred_at,
     updated_at: occurred_at,
   }

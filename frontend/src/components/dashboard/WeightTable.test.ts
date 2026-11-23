@@ -15,6 +15,8 @@ function makeWeight(date: string, grams: number): Entry {
     confidence: null,
     raw_text: null,
     confirmed: false,
+    allergens: null,
+    food_groups: null,
     created_at: date + 'T10:00:00',
     updated_at: date + 'T10:00:00',
   }
